@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayFlow - Gestion des fiches de paie</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            border-radius: 10px;
+            background-color: #fafafa;
+        }
+        .upload-area:hover {
+            border-color: #007bff;
+            background-color: #f0f8ff;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .alert {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .file-info {
+            margin: 15px 0;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PayFlow</h1>
+        <p style="text-align: center; color: #666;">Gestionnaire automatique de fiches de paie</p>
+        
+        <!-- Messages flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'error' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <!-- Formulaire d'upload -->
+        <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
+            <div class="upload-area">
+                <h3>📄 Téléverser le fichier PDF</h3>
+                <p>Sélectionnez le fichier PDF contenant plusieurs fiches de paie</p>
+                <input type="file" name="file" accept=".pdf" required style="margin: 10px 0;">
+                <div class="file-info">
+                    <small>Formats acceptés : PDF uniquement</small>
+                </div>
+            </div>
+            <div style="text-align: center;">
+                <button type="submit" class="btn">🚀 Traiter le fichier</button>
+            </div>
+        </form>
+        
+        <!-- Instructions -->
+        <div style="margin-top: 40px; padding: 20px; background-color: #e9f7ff; border-radius: 5px;">
+            <h4>📋 Comment ça fonctionne :</h4>
+            <ol>
+                <li>Téléversez votre fichier PDF contenant les fiches de paie</li>
+                <li>L'application découpe automatiquement chaque fiche</li>
+                <li>Chaque fiche est protégée par un mot de passe personnel</li>
+                <li>Les fiches sont envoyées par email aux employés correspondants</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>
