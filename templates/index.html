@@ -47,6 +47,11 @@
         .btn:hover {
             background-color: #0056b3;
         }
+        .btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
         .alert {
             padding: 15px;
             margin: 20px 0;
@@ -85,7 +90,7 @@
             {% endif %}
         {% endwith %}
         
-        <!-- Formulaire d'upload -->
+        <!-- Formulaire d'upload CORRIGÉ -->
         <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
             <div class="upload-area">
                 <h3>📄 Téléverser le fichier PDF</h3>
@@ -111,5 +116,38 @@
             </ol>
         </div>
     </div>
+    <script>
+let isSubmitting = false;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('uploadForm');
+    
+    form.addEventListener('submit', function(e) {
+        // Empêcher les soumissions multiples
+        if (isSubmitting) {
+            e.preventDefault();
+            return false;
+        }
+        
+        const fileInput = form.querySelector('input[type="file"]');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        
+        // Vérifier qu'un fichier est sélectionné
+        if (!fileInput.files || !fileInput.files) {
+            alert('Veuillez sélectionner un fichier PDF');
+            e.preventDefault();
+            return false;
+        }
+        
+        // Marquer comme en cours
+        isSubmitting = true;
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Traitement en cours...';
+        
+        // Le formulaire se soumet normalement
+    });
+});
+</script>
+
 </body>
 </html>

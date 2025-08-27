@@ -10,6 +10,15 @@ from email.mime.base import MIMEBase
 from email import encoders
 from email.mime.text import MIMEText
 from email_config import GMAIL_CONFIG
+from datetime import datetime
+import threading
+import time
+
+# Variable pour empêcher les traitements multiples
+processing_lock = threading.Lock()
+is_processing = False
+
+
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-this'  # À changer en production
@@ -21,6 +30,11 @@ ALLOWED_EXTENSIONS = {'pdf'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['OUTPUT_FOLDER'] = OUTPUT_FOLDER
+
+def generate_timestamp_folder():
+    """Génère un nom de dossier avec timestamp au format aaaammjjhhmmss"""
+    now = datetime.now()
+    return now.strftime('%Y%m%d%H%M%S')
 
 def debug_page_content(page_text, page_num):
     """Fonction de débogage pour voir le contenu d'une page"""
@@ -37,54 +51,97 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def load_employees():
-    """Charge les données des employés depuis le CSV"""
+    """Charge les données des employés depuis le CSV (nom et email seulement)"""
     employees = {}
     try:
         with open('employees.csv', 'r', encoding='utf-8') as file:
             reader = csv.DictReader(file)
             for row in reader:
                 employees[row['nom_employe']] = {
-                    'email': row['email'],
-                    'mot_de_passe': row['mot_de_passe']
+                    'email': row['email']
                 }
     except FileNotFoundError:
         flash('Fichier employees.csv non trouvé', 'error')
     return employees
+
 
 @app.route('/')
 def index():
     """Page d'accueil avec formulaire d'upload"""
     return render_template('index.html')
 
-@app.route('/upload', methods=['POST'])
+@app.route('/upload', methods=['POST'])  # IMPORTANT: Cette ligne doit être exactement comme ça
 def upload_file():
-    """Traite le fichier PDF uploadé"""
-    if 'file' not in request.files:
-        flash('Aucun fichier sélectionné', 'error')
-        return redirect(request.url)
+    """Traite le fichier PDF uploadé avec débogage"""
+    # DÉBOGAGE - à supprimer après test
+    print("=== DÉBOGAGE ===")
+    print(f"request.method: {request.method}")
+    print(f"request.files: {request.files}")
+    print(f"'file' in request.files: {'file' in request.files}")
+    if 'file' in request.files:
+        print(f"Nom du fichier: {request.files['file'].filename}")
+    print("===============")
+
+    """Traite le fichier PDF uploadé avec protection contre les soumissions multiples"""
+    global is_processing
     
-    file = request.files['file']
-    if file.filename == '':
-        flash('Aucun fichier sélectionné', 'error')
-        return redirect(request.url)
+    # Vérification côté serveur pour empêcher les traitements multiples
+    with processing_lock:
+        if is_processing:
+            flash('⚠️ Un traitement est déjà en cours. Veuillez patienter.', 'error')
+            return redirect(request.url)
+        is_processing = True
     
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
+    try:
+        if 'file' not in request.files:
+            flash('Aucun fichier sélectionné', 'error')
+            return redirect(url_for('index'))
         
-        # Traitement du PDF
-        result = process_pdf(filepath)
+        file = request.files['file']
+        if file.filename == '':
+            flash('Aucun fichier sélectionné', 'error')
+            return redirect(url_for('index'))
         
-        if result['success']:
-            flash(f'Traitement réussi ! {result["count"]} fiches traitées.', 'success')
+        if file and allowed_file(file.filename):
+            try:
+                # Génération du timestamp pour l'organisation des dossiers
+                timestamp_folder = generate_timestamp_folder()
+                
+                # Création des dossiers avec timestamp
+                upload_timestamp_dir = os.path.join(app.config['UPLOAD_FOLDER'], timestamp_folder)
+                output_timestamp_dir = os.path.join(app.config['OUTPUT_FOLDER'], timestamp_folder)
+                
+                os.makedirs(upload_timestamp_dir, exist_ok=True)
+                os.makedirs(output_timestamp_dir, exist_ok=True)
+                
+                # Sauvegarde du fichier dans le dossier timestampé
+                filename = secure_filename(file.filename)
+                filepath = os.path.join(upload_timestamp_dir, filename)
+                file.save(filepath)
+                
+                print(f"📁 Fichier sauvegardé dans : {upload_timestamp_dir}")
+                print(f"📁 Fichiers de sortie iront dans : {output_timestamp_dir}")
+                
+                # Traitement du PDF avec les nouveaux chemins
+                result = process_pdf(filepath, output_timestamp_dir)
+                
+                if result['success']:
+                    flash(f'✅ Traitement terminé avec succès ! {result["count"]} fiches traitées. Dossier : {timestamp_folder}', 'success')
+                else:
+                    flash(f'❌ Erreur lors du traitement: {result["error"]}', 'error')
+                
+            except Exception as e:
+                flash(f'❌ Erreur inattendue: {str(e)}', 'error')
+                
         else:
-            flash(f'Erreur lors du traitement: {result["error"]}', 'error')
-        
-        return redirect(url_for('index'))
-    else:
-        flash('Format de fichier non autorisé. Utilisez un PDF.', 'error')
-        return redirect(request.url)
+            flash('❌ Format de fichier non autorisé. Utilisez un PDF.', 'error')
+            
+    finally:
+        # Libérer le verrou même en cas d'erreur
+        with processing_lock:
+            is_processing = False
+            
+    return redirect(url_for('index'))
 
 def extract_employee_name_from_page(page_text):
     """Extrait le nom de l'employé depuis le texte d'une page"""
@@ -123,13 +180,147 @@ def extract_employee_name_from_page(page_text):
     
     return None
 
+def extract_employee_matricule_from_page(page_text):
+    """Extrait le matricule de l'employé depuis le texte d'une page"""
+    lines = page_text.split('\n')
+    
+    # Recherche du pattern "Matricule" suivi du numéro
+    for i, line in enumerate(lines):
+        line = line.strip()
+        
+        # Cherche la ligne contenant "Matricule"
+        if "Matricule" in line:
+            # Le matricule peut être sur la même ligne ou sur les lignes suivantes
+            
+            # Cas 1 : Le matricule est sur la même ligne après "Matricule"
+            # Exemple : "Matricule 2204      Ancienneté 2an(s) et 8mois"
+            import re
+            matricule_match = re.search(r'Matricule\s+(\d+)', line)
+            if matricule_match:
+                return matricule_match.group(1)
+            
+            # Cas 2 : Le matricule pourrait être sur la ligne suivante
+            if i + 1 < len(lines):
+                next_line = lines[i + 1].strip()
+                # Recherche d'un nombre de 4 chiffres (format matricule courant)
+                matricule_match = re.search(r'^(\d{4})(?:\s|$)', next_line)
+                if matricule_match:
+                    return matricule_match.group(1)
+    
+    return None
+
+def create_individual_pdf_with_matricule(pdf_reader, employee_name, page_numbers, matricule, employees_data, output_dir):
+    """Crée un PDF individuel pour un employé avec protection par matricule extrait du PDF"""
+    try:
+        # Création du PDF de sortie
+        pdf_writer = PyPDF2.PdfWriter()
+        
+        # Ajout des pages de l'employé
+        for page_num in page_numbers:
+            pdf_writer.add_page(pdf_reader.pages[page_num])
+        
+        # Nom du fichier de sortie dans le dossier timestampé
+        safe_filename = "".join(c for c in employee_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+        output_filename = f"{safe_filename}.pdf"
+        output_path = os.path.join(output_dir, output_filename)
+        
+        # Sauvegarde du PDF
+        with open(output_path, 'wb') as output_file:
+            pdf_writer.write(output_file)
+        
+        # Protection et envoi si l'employé est dans la base ET matricule trouvé
+        if employee_name in employees_data and matricule:
+            email = employees_data[employee_name]['email']
+            
+            # Protection du PDF avec le matricule extrait du PDF
+            protect_pdf_with_password(output_path, matricule)
+            print(f"📄 PDF créé et protégé pour {employee_name} avec matricule {matricule} (extrait du PDF)")
+            
+            # APPEL CORRIGÉ : Seulement 3 paramètres, SANS le matricule
+            if send_email_with_pdf(employee_name, email, output_path):
+                print(f"✅ Processus complet réussi pour {employee_name}")
+            else:
+                print(f"❌ Erreur lors de l'envoi pour {employee_name}")
+                
+        elif employee_name in employees_data and not matricule:
+            print(f"⚠️ Employé {employee_name} trouvé mais matricule non détecté - PDF créé sans protection")
+            
+        else:
+            print(f"📄 PDF créé SANS protection pour {employee_name} (non trouvé dans employees.csv)")
+        
+        return True
+        
+    except Exception as e:
+        print(f"Erreur lors de la création du PDF pour {employee_name}: {str(e)}")
+        return False
+
+def extract_period_from_page(page_text):
+    """Extrait la période du bulletin (année_mois) depuis le texte d'une page"""
+    lines = page_text.split('\n')
+    
+    import re
+    
+    # Patterns de recherche pour différents formats de date
+    patterns = [
+        # Format: "Période du 01/08/25 au 31/08/25"
+        r'Période du \d{2}/(\d{2})/(\d{2}) au',
+        # Format: "Période du 01/08/2025 au 31/08/2025"
+        r'Période du \d{2}/(\d{2})/(\d{4}) au',
+        # Format: "du 01/08/25 au 31/08/25"
+        r'du \d{2}/(\d{2})/(\d{2}) au',
+        # Format: "Mois: 08/2025" ou "Mois : 08/2025"
+        r'Mois\s*:\s*(\d{2})/(\d{4})',
+        # Format général date: "31/08/25" ou "01/08/2025"
+        r'(\d{1,2})/(\d{1,2})/(\d{2,4})'
+    ]
+    
+    for line in lines:
+        line = line.strip()
+        
+        # Test de chaque pattern
+        for i, pattern in enumerate(patterns):
+            match = re.search(pattern, line)
+            if match:
+                if i in [0, 2]:  # Patterns avec jours/mois/année à 2 chiffres
+                    month = match.group(1).zfill(2)
+                    year = match.group(2)
+                    # Convertir année 2 chiffres en 4 chiffres
+                    full_year = f"20{year}" if int(year) < 50 else f"19{year}"
+                    return f"{full_year}_{month}"
+                    
+                elif i == 1:  # Pattern avec année à 4 chiffres
+                    month = match.group(1).zfill(2)
+                    year = match.group(2)
+                    return f"{year}_{month}"
+                    
+                elif i == 3:  # Pattern "Mois: MM/YYYY"
+                    month = match.group(1).zfill(2)
+                    year = match.group(2)
+                    return f"{year}_{month}"
+                    
+                elif i == 4:  # Pattern date générale
+                    day = match.group(1).zfill(2)
+                    month = match.group(2).zfill(2)
+                    year = match.group(3)
+                    # Convertir année si nécessaire
+                    if len(year) == 2:
+                        full_year = f"20{year}" if int(year) < 50 else f"19{year}"
+                    else:
+                        full_year = year
+                    return f"{full_year}_{month}"
+    
+    # Si aucune date trouvée, utiliser la date actuelle
+    from datetime import datetime
+    now = datetime.now()
+    print("⚠️ Aucune période trouvée dans le PDF, utilisation de la date actuelle")
+    return now.strftime('%Y_%m')
 
 
-def process_pdf(filepath):
-    """Fonction principale de traitement du PDF"""
+def process_pdf(filepath, output_dir):
+    """Fonction principale de traitement du PDF avec extraction du matricule et de la période"""
     try:
         employees = load_employees()
-        employee_pages = {}  # Dictionnaire pour grouper les pages par employé
+        employee_data = {}  # Dictionnaire pour stocker nom, pages, matricule ET période
         
         # Ouverture du PDF
         with open(filepath, 'rb') as file:
@@ -138,37 +329,60 @@ def process_pdf(filepath):
             
             print(f"Analyse du PDF avec {total_pages} pages...")
             
-            # Analyse de chaque page pour identifier les employés
+            # Analyse de chaque page pour identifier les employés, matricules et période
             for page_num in range(total_pages):
                 page = pdf_reader.pages[page_num]
                 page_text = page.extract_text()
                 
-                # Extraction du nom de l'employé
+                # Extraction des informations
                 employee_name = extract_employee_name_from_page(page_text)
+                employee_matricule = extract_employee_matricule_from_page(page_text)
+                period = extract_period_from_page(page_text)
                 
                 if employee_name:
                     print(f"Page {page_num + 1}: Employé trouvé - {employee_name}")
+                    if employee_matricule:
+                        print(f"Page {page_num + 1}: Matricule trouvé - {employee_matricule}")
+                    if period:
+                        print(f"Page {page_num + 1}: Période trouvée - {period}")
                     
-                    # Groupement des pages par employé
-                    if employee_name not in employee_pages:
-                        employee_pages[employee_name] = []
-                    employee_pages[employee_name].append(page_num)
+                    # Groupement des pages par employé avec toutes les infos
+                    if employee_name not in employee_data:
+                        employee_data[employee_name] = {
+                            'pages': [],
+                            'matricule': employee_matricule,
+                            'period': period
+                        }
+                    else:
+                        # Si l'employé existe déjà, conserver les infos de la première page
+                        if not employee_data[employee_name]['matricule'] and employee_matricule:
+                            employee_data[employee_name]['matricule'] = employee_matricule
+                        if not employee_data[employee_name]['period'] and period:
+                            employee_data[employee_name]['period'] = period
+                    
+                    employee_data[employee_name]['pages'].append(page_num)
                 else:
                     print(f"Page {page_num + 1}: Aucun employé identifié")
-
-
             
-            # Création des PDF individuels
+            # Création des PDF individuels avec période du bulletin
             processed_count = 0
-            for employee_name, pages in employee_pages.items():
-                if create_individual_pdf(pdf_reader, employee_name, pages, employees):
+            for employee_name, data in employee_data.items():
+                if create_individual_pdf_with_period(
+                    pdf_reader, 
+                    employee_name, 
+                    data['pages'], 
+                    data['matricule'], 
+                    data['period'],
+                    employees, 
+                    output_dir
+                ):
                     processed_count += 1
                     
             return {
                 'success': True,
                 'count': processed_count,
-                'total_employees': len(employee_pages),
-                'message': f'{processed_count} fiches traitées sur {len(employee_pages)} employés détectés'
+                'total_employees': len(employee_data),
+                'message': f'{processed_count} fiches traitées sur {len(employee_data)} employés détectés'
             }
             
     except Exception as e:
@@ -178,8 +392,9 @@ def process_pdf(filepath):
             'error': str(e)
         }
 
-def create_individual_pdf(pdf_reader, employee_name, page_numbers, employees_data):
-    """Crée un PDF individuel pour un employé"""
+
+def create_individual_pdf_with_period(pdf_reader, employee_name, page_numbers, matricule, period, employees_data, output_dir):
+    """Crée un PDF individuel avec suffixe période extrait du PDF"""
     try:
         # Création du PDF de sortie
         pdf_writer = PyPDF2.PdfWriter()
@@ -188,37 +403,55 @@ def create_individual_pdf(pdf_reader, employee_name, page_numbers, employees_dat
         for page_num in page_numbers:
             pdf_writer.add_page(pdf_reader.pages[page_num])
         
-        # Nom du fichier de sortie
+        # Nom du fichier de sortie avec période du bulletin
         safe_filename = "".join(c for c in employee_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
-        output_filename = f"{safe_filename}.pdf"
-        output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+        
+        # Utilisation de la période extraite ou date actuelle si non trouvée
+        if period:
+            output_filename = f"{safe_filename}_{period}.pdf"
+        else:
+            from datetime import datetime
+            now = datetime.now()
+            current_period = now.strftime('%Y_%m')
+            output_filename = f"{safe_filename}_{current_period}.pdf"
+        
+        output_path = os.path.join(output_dir, output_filename)
         
         # Sauvegarde du PDF
         with open(output_path, 'wb') as output_file:
             pdf_writer.write(output_file)
         
-        # Protection par mot de passe et envoi d'email si l'employé est dans la base
-        if employee_name in employees_data:
-            password = employees_data[employee_name]['mot_de_passe']
+        # Protection et envoi si l'employé est dans la base ET matricule trouvé
+        if employee_name in employees_data and matricule:
             email = employees_data[employee_name]['email']
             
-            # Protection du PDF
-            protect_pdf_with_password(output_path, password)
-            print(f"PDF créé et protégé pour {employee_name}")
+            # Protection du PDF avec le matricule extrait du PDF
+            protect_pdf_with_password(output_path, matricule)
+            print(f"📄 PDF créé et protégé pour {employee_name}")
+            print(f"🔐 Matricule : {matricule} (extrait du PDF)")
+            print(f"📅 Période : {period if period else 'date actuelle'}")
+            print(f"📁 Fichier : {output_filename}")
             
-            # Envoi par email
-            if send_email_with_pdf(employee_name, email, output_path, password):
-                print(f"Processus complet réussi pour {employee_name}")
+            # Envoi par email SANS révéler le matricule
+            if send_email_with_pdf(employee_name, email, output_path):
+                print(f"✅ Processus complet réussi pour {employee_name}")
             else:
-                print(f"Erreur lors de l'envoi pour {employee_name}")
+                print(f"❌ Erreur lors de l'envoi pour {employee_name}")
+                
+        elif employee_name in employees_data and not matricule:
+            print(f"⚠️ Employé {employee_name} trouvé mais matricule non détecté")
+            print(f"📁 PDF créé sans protection : {output_filename}")
+            
         else:
-            print(f"PDF créé SANS protection pour {employee_name} (non trouvé dans employees.csv)")
+            print(f"📄 PDF créé SANS protection pour {employee_name} (non trouvé dans employees.csv)")
+            print(f"📁 Fichier : {output_filename}")
         
         return True
         
     except Exception as e:
         print(f"Erreur lors de la création du PDF pour {employee_name}: {str(e)}")
         return False
+
 
 
 def protect_pdf_with_password(filepath, password):
@@ -247,7 +480,7 @@ def protect_pdf_with_password(filepath, password):
         except Exception as e2:
             print(f"Erreur lors de la protection alternative du PDF: {str(e2)}")
 
-def send_email_with_pdf(employee_name, email, pdf_path, password):
+def send_email_with_pdf(employee_name, email, pdf_path):
     """Envoie la fiche de paie par email à l'employé"""
     try:
         # Utilisation de la configuration externe
@@ -268,10 +501,11 @@ Bonjour {employee_name},
 
 Veuillez trouver ci-joint votre fiche de paie.
 
-Le fichier est protégé par mot de passe : {password}
+Le fichier PDF est protégé par un mot de passe. 
+Pour l'ouvrir, utilisez votre matricule d'employé.
 
 Cordialement,
-L'équipe PayFlow
+L'équipe RH 
         """
         
         msg.attach(MIMEText(body, 'plain'))
