@@ -13,6 +13,10 @@ from email_config import GMAIL_CONFIG
 from datetime import datetime
 import threading
 import time
+from flask import jsonify
+import json
+import os
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 
 # Variable pour empêcher les traitements multiples
 processing_lock = threading.Lock()
@@ -537,6 +541,170 @@ L'équipe RH
     except Exception as e:
         print(f"Erreur lors de l'envoi de l'email à {employee_name}: {str(e)}")
         return False
+@app.route('/dashboard')
+def dashboard():
+    """Dashboard avec historique des traitements"""
+    try:
+        # Collecte des dossiers de traitements
+        uploads_path = app.config['UPLOAD_FOLDER']
+        output_path = app.config['OUTPUT_FOLDER']
+        
+        treatments = []
+        
+        # Parcours des dossiers horodatés
+        if os.path.exists(uploads_path):
+            for folder in os.listdir(uploads_path):
+                folder_path = os.path.join(uploads_path, folder)
+                if os.path.isdir(folder_path):
+                    # Information sur le traitement
+                    treatment_info = analyze_treatment_folder(folder, folder_path, output_path)
+                    if treatment_info:
+                        treatments.append(treatment_info)
+        
+        # Tri par date décroissante
+        treatments.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        # Statistiques globales
+        stats = calculate_global_stats(treatments)
+        
+        return render_template('dashboard.html', treatments=treatments, stats=stats)
+        
+    except Exception as e:
+        flash(f'Erreur lors du chargement du dashboard: {str(e)}', 'error')
+        return redirect(url_for('index'))
+
+def analyze_treatment_folder(folder_name, upload_path, output_path):
+    """Analyse un dossier de traitement pour extraire les statistiques"""
+    try:
+        from datetime import datetime
+        
+        # Parse du timestamp
+        timestamp_str = folder_name
+        try:
+            timestamp = datetime.strptime(timestamp_str, '%Y%m%d%H%M%S')
+        except ValueError:
+            return None
+        
+        # Fichier original
+        original_files = [f for f in os.listdir(upload_path) if f.endswith('.pdf')]
+        original_file = original_files[0] if original_files else 'Inconnu'
+        
+        # Dossier de sortie correspondant
+        output_folder_path = os.path.join(output_path, folder_name)
+        
+        # Comptage des PDFs générés
+        generated_files = []
+        if os.path.exists(output_folder_path):
+            generated_files = [f for f in os.listdir(output_folder_path) if f.endswith('.pdf')]
+        
+        # Calcul de la taille du fichier original
+        original_file_path = os.path.join(upload_path, original_file)
+        file_size = 0
+        if os.path.exists(original_file_path):
+            file_size = os.path.getsize(original_file_path)
+        
+        return {
+            'timestamp': timestamp,
+            'timestamp_str': timestamp_str,
+            'date_formatted': timestamp.strftime('%d/%m/%Y à %H:%M:%S'),
+            'original_file': original_file,
+            'file_size': format_file_size(file_size),
+            'employees_count': len(generated_files),
+            'generated_files': generated_files,
+            'status': 'Réussi' if generated_files else 'Échec'
+        }
+        
+    except Exception as e:
+        return None
+
+def calculate_global_stats(treatments):
+    """Calcule les statistiques globales"""
+    if not treatments:
+        return {
+            'total_treatments': 0,
+            'total_employees': 0,
+            'total_files_generated': 0,
+            'success_rate': 0,
+            'last_treatment': None
+        }
+    
+    successful_treatments = [t for t in treatments if t['status'] == 'Réussi']
+    
+    return {
+        'total_treatments': len(treatments),
+        'total_employees': sum(t['employees_count'] for t in treatments),
+        'total_files_generated': sum(t['employees_count'] for t in successful_treatments),
+        'success_rate': round(len(successful_treatments) / len(treatments) * 100, 1) if treatments else 0,
+        'last_treatment': treatments[0]['date_formatted'] if treatments else None
+    }
+
+def format_file_size(size_bytes):
+    """Formate la taille de fichier en format lisible"""
+    if size_bytes == 0:
+        return "0B"
+    size_names = ["B", "KB", "MB", "GB"]
+    i = 0
+    while size_bytes >= 1024 and i < len(size_names) - 1:
+        size_bytes /= 1024.0
+        i += 1
+    return f"{size_bytes:.1f} {size_names[i]}"
+
+from flask import send_file
+
+@app.route('/download/<timestamp>/<filename>')
+def download_file(timestamp, filename):
+    """Permet de télécharger un fichier PDF généré"""
+    try:
+        file_path = os.path.join(app.config['OUTPUT_FOLDER'], timestamp, filename)
+        
+        if os.path.exists(file_path):
+            return send_file(file_path, as_attachment=True, download_name=filename)
+        else:
+            flash('Fichier non trouvé', 'error')
+            return redirect(url_for('dashboard'))
+            
+    except Exception as e:
+        flash(f'Erreur lors du téléchargement: {str(e)}', 'error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/cleanup')
+def cleanup_files():
+    """Nettoie les fichiers de plus de 30 jours"""
+    try:
+        from datetime import datetime, timedelta
+        
+        cutoff_date = datetime.now() - timedelta(days=30)
+        deleted_folders = 0
+        
+        # Nettoyage des uploads
+        if os.path.exists(app.config['UPLOAD_FOLDER']):
+            for folder in os.listdir(app.config['UPLOAD_FOLDER']):
+                try:
+                    folder_date = datetime.strptime(folder, '%Y%m%d%H%M%S')
+                    if folder_date < cutoff_date:
+                        import shutil
+                        shutil.rmtree(os.path.join(app.config['UPLOAD_FOLDER'], folder))
+                        deleted_folders += 1
+                except ValueError:
+                    continue  # Ignore les dossiers qui ne correspondent pas au format
+        
+        # Nettoyage des outputs
+        if os.path.exists(app.config['OUTPUT_FOLDER']):
+            for folder in os.listdir(app.config['OUTPUT_FOLDER']):
+                try:
+                    folder_date = datetime.strptime(folder, '%Y%m%d%H%M%S')
+                    if folder_date < cutoff_date:
+                        import shutil
+                        shutil.rmtree(os.path.join(app.config['OUTPUT_FOLDER'], folder))
+                except ValueError:
+                    continue
+        
+        flash(f'Nettoyage terminé ! {deleted_folders} dossier(s) supprimé(s) (+ de 30 jours)', 'success')
+        return redirect(url_for('dashboard'))
+        
+    except Exception as e:
+        flash(f'Erreur lors du nettoyage: {str(e)}', 'error')
+        return redirect(url_for('dashboard'))
 
 
 if __name__ == '__main__':

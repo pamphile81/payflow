@@ -1,3 +1,39 @@
+**Application web automatique de gestion et distribution des fiches de paie avec Dashboard**
+
+![Version](https://img.shields.io/badge/version-1.1-blue.svg)
+![Python](https://img.shields.io/badge/python-3.7+-green.svg)
+![License](https://img.shields.io/badge/license-MIT-yellow.svg)
+
+---
+
+## 🆕 Nouveautés v1.1
+
+### 🎨 Interface moderne
+- **Design Tailwind CSS** : Interface responsive avec dégradés modernes
+- **Zone drag & drop** : Upload de fichiers par glisser-déposer
+- **Cartes d'information** : Présentation claire des fonctionnalités
+- **Mobile-friendly** : Compatible tous écrans
+
+### 📊 Dashboard complet
+- **Statistiques globales** : Traitements, employés, fichiers, taux de réussite
+- **Historique chronologique** : Détails de tous les traitements effectués  
+- **Téléchargements directs** : Liens pour chaque PDF généré
+- **Visualisation des résultats** : Liste des fiches créées par session
+
+### 🗂️ Gestion avancée des fichiers
+- **Téléchargement individuel** : Récupération de chaque PDF via le dashboard
+- **Nettoyage automatique** : Suppression des fichiers > 30 jours
+- **Navigation fluide** : Liens entre interface principale et dashboard
+- **Messages contextuels** : Confirmations et alertes intégrées
+
+### 🔧 Améliorations techniques
+- **Extraction de période** : Nomenclature `NOM_EMPLOYE_YYYY_MM.pdf`
+- **Configuration externalisée** : Séparation des paramètres SMTP
+- **Protection robuste** : Threading locks contre traitements simultanés
+- **Logs détaillés** : Suivi complet avec debug intégré
+
+---
+
 # PayFlow v1.0 🚀
 
 **Application web automatique de gestion et distribution des fiches de paie**
