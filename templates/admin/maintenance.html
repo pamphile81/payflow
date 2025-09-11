@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance système - PayFlow Admin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fc;
+            color: #2d3748;
+        }
+        
+        .maintenance-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .maintenance-header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-content h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+        
+        .header-content .subtitle {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-white {
+            background: white;
+            color: #ff6b6b;
+        }
+        
+        .btn-transparent {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .health-section {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+        
+        .health-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .health-score {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .health-excellent { background: linear-gradient(135deg, #48bb78, #38a169); }
+        .health-good { background: linear-gradient(135deg, #ed8936, #dd6b20); }
+        .health-warning { background: linear-gradient(135deg, #f6ad55, #ed8936); }
+        .health-critical { background: linear-gradient(135deg, #f56565, #e53e3e); }
+        .health-unknown { background: linear-gradient(135deg, #718096, #4a5568); }
+        
+        .health-info h2 {
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+        
+        .health-status {
+            font-size: 14px;
+            color: #718096;
+        }
+        
+        .health-issues {
+            margin-top: 15px;
+        }
+        
+        .issue-item {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 8px 15px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--accent-color, #667eea);
+        }
+        
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            background: var(--accent-color, #667eea);
+        }
+        
+        .stat-number {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: var(--accent-color, #667eea);
+        }
+        
+        .stat-label {
+            color: #718096;
+            font-size: 16px;
+        }
+        
+        .stat-files { --accent-color: #ff6b6b; }
+        .stat-space { --accent-color: #ed8936; }
+        .stat-db { --accent-color: #667eea; }
+        .stat-links { --accent-color: #9f7aea; }
+        
+        .maintenance-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .action-card {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        
+        .action-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .action-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            color: white;
+        }
+        
+        .action-cleanup { background: linear-gradient(135deg, #ff6b6b, #ff8e53); }
+        .action-backup { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .action-optimize { background: linear-gradient(135deg, #48bb78, #38a169); }
+        
+        .action-title {
+            font-size: 20px;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+        
+        .action-description {
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .confirmation-section {
+            background: #fef5e7;
+            border: 1px solid #f6ad55;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .confirmation-section h4 {
+            color: #c05621;
+            margin-bottom: 10px;
+        }
+        
+        .confirmation-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .confirmation-checkbox input[type="checkbox"] {
+            transform: scale(1.2);
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-success {
+            background: #c6f6d5;
+            color: #2f855a;
+            border: 1px solid #9ae6b4;
+        }
+        
+        .alert-error {
+            background: #fed7d7;
+            color: #c53030;
+            border: 1px solid #feb2b2;
+        }
+        
+        .breadcrumb {
+            background: #f7fafc;
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 14px;
+            color: #4a5568;
+        }
+        
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="maintenance-container">
+        <!-- En-tête -->
+        <div class="maintenance-header">
+            <div class="header-content">
+                <h1>🛠️ Maintenance système</h1>
+                <p class="subtitle">Nettoyage, optimisation et surveillance de PayFlow</p>
+            </div>
+            <div class="header-actions">
+                <a href="{{ url_for('manage_employees') }}" class="btn btn-white">
+                    👥 Employés
+                </a>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-transparent">
+                    📊 Dashboard
+                </a>
+            </div>
+        </div>
+        
+        <div class="breadcrumb">
+            <a href="{{ url_for('dashboard') }}">🏠 Dashboard</a> > 
+            <a href="{{ url_for('manage_employees') }}">👥 Administration</a> > 
+            Maintenance
+        </div>
+        
+        <!-- Messages flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'error' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <!-- État de santé du système -->
+        <div class="health-section">
+            <div class="health-header">
+                <div class="health-score health-{{ stats.system_health.status or 'unknown' }}">
+                    {{ stats.system_health.score or 0 }}%
+                </div>
+                <div class="health-info">
+                    <h2>État de santé du système</h2>
+                    <div class="health-status">
+                        {% set status = stats.system_health.status or 'unknown' %}
+                        {% if status == 'excellent' %}
+                            ✅ Excellent - Système optimal
+                        {% elif status == 'good' %}
+                            👍 Bon - Fonctionnement normal
+                        {% elif status == 'warning' %}
+                            ⚠️ Attention - Maintenance recommandée
+                        {% elif status == 'critical' %}
+                            🚨 Critique - Maintenance urgente
+                        {% else %}
+                            ❓ État inconnu
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            {% if stats.system_health.issues %}
+                <div class="health-issues">
+                    <h4>⚠️ Problèmes détectés:</h4>
+                    {% for issue in stats.system_health.issues %}
+                        <div class="issue-item">{{ issue }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Statistiques de maintenance -->
+        <div class="stats-grid">
+            <div class="stat-card stat-files">
+                <div class="stat-header">
+                    <div class="stat-icon">📁</div>
+                </div>
+                <div class="stat-number">{{ stats.old_files_count or 0 }}</div>
+                <div class="stat-label">Fichiers anciens (>30j)</div>
+            </div>
+            
+            <div class="stat-card stat-space">
+                <div class="stat-header">
+                    <div class="stat-icon">💾</div>
+                </div>
+                <div class="stat-number">{{ (stats.total_size / (1024*1024))|round(1) if stats.total_size else 0 }}</div>
+                <div class="stat-label">MB utilisés</div>
+            </div>
+            
+            <div class="stat-card stat-links">
+                <div class="stat-header">
+                    <div class="stat-icon">🔗</div>
+                </div>
+                <div class="stat-number">{{ stats.expired_links or 0 }}</div>
+                <div class="stat-label">Liens expirés</div>
+            </div>
+            
+            <div class="stat-card stat-db">
+                <div class="stat-header">
+                    <div class="stat-icon">🗃️</div>
+                </div>
+                <div class="stat-number">{{ stats.db_stats.employees_count or 0 }}</div>
+                <div class="stat-label">Employés en base</div>
+            </div>
+        </div>
+        
+        <!-- Actions de maintenance -->
+        <div class="maintenance-actions">
+            <!-- Nettoyage -->
+            <div class="action-card">
+                <div class="action-header">
+                    <div class="action-icon action-cleanup">🧹</div>
+                    <div>
+                        <h3 class="action-title">Nettoyage système</h3>
+                        <p class="action-description">
+                            Supprime les liens expirés, fichiers anciens (>30 jours) et libère de l'espace disque.
+                        </p>
+                    </div>
+                </div>
+                
+                <form method="POST" action="{{ url_for('execute_cleanup') }}">
+                    <div class="confirmation-section">
+                        <h4>⚠️ Attention</h4>
+                        <p>Cette action supprimera définitivement:</p>
+                        <ul style="margin: 10px 0 10px 20px; color: #c05621;">
+                            <li>{{ stats.expired_links or 0 }} liens expirés</li>
+                            <li>{{ stats.old_files_count or 0 }} dossiers anciens</li>
+                            <li>~{{ (stats.old_files_size / (1024*1024))|round(1) if stats.old_files_size else 0 }} MB</li>
+                        </ul>
+                        
+                        <div class="confirmation-checkbox">
+                            <input type="checkbox" id="confirm_cleanup" name="confirm" value="true" required>
+                            <label for="confirm_cleanup">Je confirme vouloir effectuer ce nettoyage</label>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" name="cleanup_type" value="all">
+                    <button type="submit" class="btn btn-danger">
+                        🧹 Nettoyer maintenant
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Sauvegarde -->
+            <div class="action-card">
+                <div class="action-header">
+                    <div class="action-icon action-backup">💾</div>
+                    <div>
+                        <h3 class="action-title">Sauvegarde</h3>
+                        <p class="action-description">
+                            Crée une sauvegarde complète de la base de données PostgreSQL.
+                        </p>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px; color: #718096; font-size: 14px;">
+                    {% if stats.last_cleanup %}
+                        Dernière sauvegarde: {{ stats.last_cleanup.strftime('%d/%m/%Y à %H:%M') }}
+                    {% else %}
+                        Aucune sauvegarde récente
+                    {% endif %}
+                </div>
+                
+                <form method="POST" action="{{ url_for('create_backup') }}">
+                    <button type="submit" class="btn btn-primary">
+                        💾 Créer une sauvegarde
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Optimisation -->
+            <div class="action-card">
+                <div class="action-header">
+                    <div class="action-icon action-optimize">⚡</div>
+                    <div>
+                        <h3 class="action-title">Optimisation</h3>
+                        <p class="action-description">
+                            Optimise la base de données PostgreSQL (VACUUM ANALYZE) pour de meilleures performances.
+                        </p>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px; color: #718096; font-size: 14px;">
+                    Base de données: {{ stats.db_stats.treatments_count or 0 }} traitements, 
+                    {{ stats.db_stats.download_links_count or 0 }} liens
+                </div>
+                
+                <form method="POST" action="{{ url_for('optimize_database') }}">
+                    <button type="submit" class="btn btn-success">
+                        ⚡ Optimiser la base
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-actualisation des statistiques toutes les 30 secondes
+        setTimeout(function() {
+            location.reload();
+        }, 30000);
+        
+        // Confirmation pour les actions dangereuses
+        document.querySelectorAll('.btn-danger').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                const checkbox = document.getElementById('confirm_cleanup');
+                if (checkbox && !checkbox.checked) {
+                    e.preventDefault();
+                    alert('Veuillez cocher la case de confirmation');
+                    checkbox.focus();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

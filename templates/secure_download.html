@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Téléchargement sécurisé - PayFlow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .download-container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .security-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            color: white;
+            font-size: 36px;
+        }
+        
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .file-info {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .file-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+        
+        .file-details {
+            color: #718096;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+            text-align: left;
+        }
+        
+        label {
+            display: block;
+            color: #2d3748;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .help-text {
+            color: #718096;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .download-btn:active {
+            transform: translateY(0);
+        }
+        
+        .security-info {
+            background: #e6fffa;
+            border: 1px solid #81e6d9;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 25px;
+            text-align: left;
+        }
+        
+        .security-info h4 {
+            color: #285e61;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .security-info ul {
+            color: #2c7a7b;
+            font-size: 14px;
+            list-style: none;
+        }
+        
+        .security-info li {
+            margin-bottom: 5px;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .security-info li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #38a169;
+            font-weight: bold;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-error {
+            background: #fed7d7;
+            color: #c53030;
+            border: 1px solid #feb2b2;
+        }
+        
+        .alert-info {
+            background: #bee3f8;
+            color: #2c5282;
+            border: 1px solid #90cdf4;
+        }
+        
+        .expiry-warning {
+            background: #fef5e7;
+            color: #c05621;
+            border: 1px solid #f6ad55;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="download-container">
+        <div class="security-icon">🔐</div>
+        
+        <h1>Téléchargement sécurisé</h1>
+        <p class="subtitle">Fiche de paie de {{ download_link.employee.nom_employe }}</p>
+        
+        <!-- Avertissement d'expiration -->
+        {% if download_link.expires_in_days <= 7 %}
+        <div class="expiry-warning">
+            ⚠️ Ce lien expire dans {{ download_link.expires_in_days }} jour(s)
+        </div>
+        {% endif %}
+        
+        <!-- Messages flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'error' if category == 'error' else 'info' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <div class="file-info">
+            <div class="file-name">📄 {{ download_link.nom_fichier }}</div>
+            <div class="file-details">
+                Traitement du {{ download_link.traitement.date_creation.strftime('%d/%m/%Y à %H:%M') }}
+                • Expire le {{ download_link.date_expiration.strftime('%d/%m/%Y') }}
+            </div>
+        </div>
+        
+        <form method="POST" action="{{ url_for('verify_and_download', token=download_link.token) }}">
+            <div class="form-group">
+                <label for="matricule">🔑 Matricule d'employé</label>
+                <input type="text" 
+                       id="matricule" 
+                       name="matricule" 
+                       required 
+                       placeholder="Saisissez votre matricule"
+                       autocomplete="off"
+                       maxlength="20">
+                <div class="help-text">
+                    Votre matricule se trouve sur votre contrat de travail ou vos anciens bulletins
+                </div>
+            </div>
+            
+            <button type="submit" class="download-btn">
+                📥 Télécharger ma fiche de paie
+            </button>
+        </form>
+        
+        <div class="security-info">
+            <h4>🛡️ Informations de sécurité</h4>
+            <ul>
+                <li>Ce lien est personnel et confidentiel</li>
+                <li>Votre matricule est requis pour la sécurité</li>
+                <li>{{ download_link.max_tentatives - download_link.tentatives_acces }} tentatives restantes</li>
+                <li>Le lien expire automatiquement après 30 jours</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

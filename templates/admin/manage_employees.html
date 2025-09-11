@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des employés - PayFlow Admin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fc;
+            color: #2d3748;
+        }
+        
+        .admin-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .admin-header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .admin-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .admin-title h1 {
+            color: #2d3748;
+            font-size: 32px;
+        }
+        
+        .breadcrumb {
+            color: #718096;
+            font-size: 14px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #718096;
+            font-size: 14px;
+        }
+        
+        .stat-active { color: #48bb78; }
+        .stat-total { color: #667eea; }
+        .stat-imported { color: #ed8936; }
+        .stat-manual { color: #9f7aea; }
+        
+        .search-section {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+        }
+        
+        .search-form {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .search-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .employees-table {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            background: #f7fafc;
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        th {
+            background: #f7fafc;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        
+        tr:hover {
+            background: #f7fafc;
+        }
+        
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-actif {
+            background: #c6f6d5;
+            color: #2f855a;
+        }
+        
+        .status-supprime {
+            background: #fed7d7;
+            color: #c53030;
+        }
+        
+        .source-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .source-pdf_import {
+            background: #bee3f8;
+            color: #2c5282;
+        }
+        
+        .source-manual {
+            background: #e9d8fd;
+            color: #553c9a;
+        }
+        
+        .action-buttons-table {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+        
+        .btn-edit {
+            background: #fbd38d;
+            color: #c05621;
+        }
+        
+        .btn-delete {
+            background: #fed7d7;
+            color: #c53030;
+        }
+        
+        .pagination {
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .pagination a, .pagination span {
+            padding: 8px 12px;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #4a5568;
+        }
+        
+        .pagination a:hover {
+            background: #e2e8f0;
+        }
+        
+        .pagination .current {
+            background: #667eea;
+            color: white;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-success {
+            background: #c6f6d5;
+            color: #2f855a;
+            border: 1px solid #9ae6b4;
+        }
+        
+        .alert-error {
+            background: #fed7d7;
+            color: #c53030;
+            border: 1px solid #feb2b2;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #718096;
+        }
+        
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- En-tête -->
+        <div class="admin-header">
+            <div class="admin-title">
+                <div>
+                    <h1>👥 Gestion des employés</h1>
+                    <div class="breadcrumb">Administration > Employés</div>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <a href="{{ url_for('export_employees') }}" class="btn btn-secondary">
+                    📊 Exporter CSV
+                </a>
+                <a href="{{ url_for('add_employee') }}" class="btn btn-primary">
+                    ➕ Ajouter un employé
+                </a>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                    🏠 Dashboard
+                </a>
+            </div>
+        </div>
+        
+        <!-- Messages flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'error' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <!-- Statistiques -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number stat-total">{{ stats.total_employees }}</div>
+                <div class="stat-label">Total employés</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number stat-active">{{ stats.active_employees }}</div>
+                <div class="stat-label">Employés actifs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number stat-imported">{{ stats.pdf_imported }}</div>
+                <div class="stat-label">Importés depuis PDF</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number stat-manual">{{ stats.manual_added }}</div>
+                <div class="stat-label">Ajoutés manuellement</div>
+            </div>
+        </div>
+        
+        <!-- Recherche -->
+        <div class="search-section">
+            <form method="GET" class="search-form">
+                <input type="text" 
+                       name="search" 
+                       value="{{ search }}" 
+                       placeholder="🔍 Rechercher par nom, email ou matricule..."
+                       class="search-input">
+                <button type="submit" class="btn btn-primary">Rechercher</button>
+                {% if search %}
+                    <a href="{{ url_for('manage_employees') }}" class="btn btn-secondary">Effacer</a>
+                {% endif %}
+            </form>
+        </div>
+        
+        <!-- Tableau des employés -->
+        <div class="employees-table">
+            <div class="table-header">
+                <h3>📋 Liste des employés ({{ employees.total }} total{{ 's' if employees.total > 1 else '' }})</h3>
+            </div>
+            
+            {% if employees.items %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Matricule</th>
+                            <th>Nom</th>
+                            <th>Email</th>
+                            <th>Statut</th>
+                            <th>Source</th>
+                            <th>Créé le</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for employee in employees.items %}
+                        <tr>
+                            <td>
+                                <strong>{{ employee.matricule or '-' }}</strong>
+                            </td>
+                            <td>{{ employee.nom_employe }}</td>
+                            <td>{{ employee.email }}</td>
+                            <td>
+                                <span class="status-badge status-{{ employee.statut }}">
+                                    {{ employee.statut.title() }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="source-badge source-{{ employee.source_creation }}">
+                                    {{ 'PDF' if employee.source_creation == 'pdf_import' else 'Manuel' }}
+                                </span>
+                            </td>
+                            <td>{{ employee.date_creation.strftime('%d/%m/%Y') }}</td>
+                            <td>
+                                <div class="action-buttons-table">
+                                    <a href="{{ url_for('edit_employee', employee_id=employee.id) }}" 
+                                       class="btn btn-small btn-edit">
+                                        ✏️ Modifier
+                                    </a>
+                                    {% if employee.statut == 'actif' %}
+                                        <form method="POST" 
+                                              action="{{ url_for('delete_employee', employee_id=employee.id) }}" 
+                                              style="display: inline;"
+                                              onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer {{ employee.nom_employe }} ?')">
+                                            <button type="submit" class="btn btn-small btn-delete">
+                                                🗑️ Supprimer
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+                <!-- Pagination -->
+                {% if employees.pages > 1 %}
+                <div class="pagination">
+                    {% if employees.has_prev %}
+                        <a href="{{ url_for('manage_employees', page=employees.prev_num, search=search) }}">&laquo; Précédent</a>
+                    {% endif %}
+                    
+                    {% for page_num in employees.iter_pages() %}
+                        {% if page_num %}
+                            {% if page_num != employees.page %}
+                                <a href="{{ url_for('manage_employees', page=page_num, search=search) }}">{{ page_num }}</a>
+                            {% else %}
+                                <span class="current">{{ page_num }}</span>
+                            {% endif %}
+                        {% else %}
+                            <span>...</span>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if employees.has_next %}
+                        <a href="{{ url_for('manage_employees', page=employees.next_num, search=search) }}">Suivant &raquo;</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">👤</div>
+                    <h3>{{ 'Aucun résultat' if search else 'Aucun employé' }}</h3>
+                    <p>
+                        {% if search %}
+                            Aucun employé ne correspond à votre recherche "{{ search }}"
+                        {% else %}
+                            Commencez par ajouter des employés ou traitez un PDF pour les importer automatiquement
+                        {% endif %}
+                    </p>
+                    {% if not search %}
+                        <a href="{{ url_for('add_employee') }}" class="btn btn-primary" style="margin-top: 20px;">
+                            ➕ Ajouter le premier employé
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erreur de téléchargement - PayFlow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .error-container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .error-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            color: white;
+            font-size: 36px;
+        }
+        
+        h1 {
+            color: #e53e3e;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+        
+        .error-message {
+            color: #2d3748;
+            margin-bottom: 30px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        
+        .help-section {
+            background: #f7fafc;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            text-align: left;
+        }
+        
+        .help-section h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .help-section ul {
+            color: #4a5568;
+            list-style: none;
+        }
+        
+        .help-section li {
+            margin-bottom: 10px;
+            padding-left: 25px;
+            position: relative;
+        }
+        
+        .help-section li:before {
+            content: "💡";
+            position: absolute;
+            left: 0;
+        }
+        
+        .contact-info {
+            background: #e6fffa;
+            border: 1px solid #81e6d9;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .contact-info h4 {
+            color: #285e61;
+            margin-bottom: 10px;
+        }
+        
+        .contact-info p {
+            color: #2c7a7b;
+            font-size: 14px;
+        }
+        
+        .back-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-decoration: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-weight: 600;
+            display: inline-block;
+            margin-top: 20px;
+            transition: transform 0.2s;
+        }
+        
+        .back-btn:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">❌</div>
+        
+        <h1>Accès refusé</h1>
+        
+        <div class="error-message">
+            <strong>{{ error }}</strong>
+        </div>
+        
+        <div class="help-section">
+            <h3>🤔 Que faire ?</h3>
+            <ul>
+                <li>Vérifiez que vous avez cliqué sur le bon lien dans votre email</li>
+                <li>Assurez-vous que le lien n'a pas expiré (valable 30 jours)</li>
+                <li>Contactez les ressources humaines si le problème persiste</li>
+                <li>Demandez un nouveau lien de téléchargement si nécessaire</li>
+            </ul>
+        </div>
+        
+        <div class="contact-info">
+            <h4>📞 Besoin d'aide ?</h4>
+            <p>
+                Contactez le service des ressources humaines de votre entreprise
+                pour obtenir un nouveau lien de téléchargement ou résoudre ce problème.
+            </p>
+        </div>
+        
+        <a href="mailto:rh@votre-entreprise.com" class="back-btn">
+            📧 Contacter les RH
+        </a>
+    </div>
+</body>
+</html>

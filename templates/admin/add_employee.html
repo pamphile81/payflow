@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ajouter un employé - PayFlow Admin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fc;
+            color: #2d3748;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .form-container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        .form-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .form-header h1 {
+            color: #2d3748;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .form-header .subtitle {
+            color: #718096;
+            font-size: 16px;
+        }
+        
+        .breadcrumb {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            font-size: 14px;
+            color: #4a5568;
+        }
+        
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-label {
+            display: block;
+            color: #2d3748;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        
+        .form-label.required::after {
+            content: " *";
+            color: #e53e3e;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: #ffffff;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-input:invalid {
+            border-color: #e53e3e;
+        }
+        
+        .form-help {
+            color: #718096;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-error {
+            background: #fed7d7;
+            color: #c53030;
+            border: 1px solid #feb2b2;
+        }
+        
+        .alert-success {
+            background: #c6f6d5;
+            color: #2f855a;
+            border: 1px solid #9ae6b4;
+        }
+        
+        .form-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            color: white;
+            font-size: 24px;
+        }
+        
+        .required-info {
+            background: #e6fffa;
+            border: 1px solid #81e6d9;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+        }
+        
+        .required-info h4 {
+            color: #285e61;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .required-info p {
+            color: #2c7a7b;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <div class="form-header">
+            <div class="form-icon">👤</div>
+            <h1>Ajouter un employé</h1>
+            <p class="subtitle">Créer un nouveau profil employé</p>
+        </div>
+        
+        <div class="breadcrumb">
+            <a href="{{ url_for('dashboard') }}">🏠 Dashboard</a> > 
+            <a href="{{ url_for('manage_employees') }}">👥 Employés</a> > 
+            Ajouter
+        </div>
+        
+        <!-- Messages flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'error' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <div class="required-info">
+            <h4>ℹ️ Informations importantes</h4>
+            <p>Les champs marqués d'un astérisque (*) sont obligatoires. Le matricule peut être ajouté plus tard s'il n'est pas connu maintenant.</p>
+        </div>
+        
+        <form method="POST" action="{{ url_for('add_employee') }}">
+            <div class="form-group">
+                <label for="nom_employe" class="form-label required">Nom complet</label>
+                <input type="text" 
+                       id="nom_employe" 
+                       name="nom_employe" 
+                       class="form-input"
+                       placeholder="Ex: DUPONT JEAN MARIE"
+                       required
+                       maxlength="200"
+                       value="{{ request.form.nom_employe or '' }}">
+                <div class="form-help">Nom et prénom(s) de l'employé en majuscules</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="email" class="form-label required">Adresse email</label>
+                <input type="email" 
+                       id="email" 
+                       name="email" 
+                       class="form-input"
+                       placeholder="jean.dupont@entreprise.com"
+                       required
+                       maxlength="200"
+                       value="{{ request.form.email or '' }}">
+                <div class="form-help">Email professionnel où seront envoyés les liens de téléchargement</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="matricule" class="form-label">Matricule</label>
+                <input type="text" 
+                       id="matricule" 
+                       name="matricule" 
+                       class="form-input"
+                       placeholder="Ex: 2204"
+                       maxlength="20"
+                       value="{{ request.form.matricule or '' }}">
+                <div class="form-help">Matricule unique de l'employé (optionnel, peut être extrait automatiquement des PDFs)</div>
+            </div>
+            
+            <div class="form-actions">
+                <a href="{{ url_for('manage_employees') }}" class="btn btn-secondary">
+                    ❌ Annuler
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    ✅ Ajouter l'employé
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <script>
+        // Auto-formatage du nom en majuscules
+        document.getElementById('nom_employe').addEventListener('input', function(e) {
+            e.target.value = e.target.value.toUpperCase();
+        });
+        
+        // Validation en temps réel
+        document.getElementById('email').addEventListener('blur', function(e) {
+            const email = e.target.value;
+            if (email && !email.includes('@')) {
+                e.target.style.borderColor = '#e53e3e';
+            } else {
+                e.target.style.borderColor = '#e2e8f0';
+            }
+        });
+    </script>
+</body>
+</html>
