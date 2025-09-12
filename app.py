@@ -19,6 +19,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import hashlib
 import secrets
+import logging
+from logging.handlers import RotatingFileHandler
 
 # Import des modèles et configuration
 from config import config
@@ -28,9 +30,71 @@ from models import db, Employee, Traitement, TraitementEmploye, DownloadLink
 processing_lock = threading.Lock()
 is_processing = False
 
+def setup_logging(app):
+    """Configure le système de logging pour PayFlow"""
+    
+    # Créer le dossier logs s'il n'existe pas
+    if not os.path.exists('logs'):
+        os.makedirs('logs')
+    
+    # Configuration du format des logs
+    formatter = logging.Formatter(
+        '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
+    )
+    
+    # 1. Log général de l'application (rotation 10MB, 10 fichiers)
+    file_handler = RotatingFileHandler(
+        'logs/payflow.log', 
+        maxBytes=10*1024*1024,  # 10MB
+        backupCount=10
+    )
+    file_handler.setFormatter(formatter)
+    file_handler.setLevel(logging.INFO)
+    app.logger.addHandler(file_handler)
+    
+    # 2. Log des erreurs uniquement
+    error_handler = RotatingFileHandler(
+        'logs/payflow_errors.log',
+        maxBytes=5*1024*1024,   # 5MB
+        backupCount=5
+    )
+    error_handler.setFormatter(formatter)
+    error_handler.setLevel(logging.ERROR)
+    app.logger.addHandler(error_handler)
+    
+    # 3. Log des accès sécurisés (téléchargements)
+    security_handler = RotatingFileHandler(
+        'logs/payflow_security.log',
+        maxBytes=5*1024*1024,   # 5MB  
+        backupCount=10
+    )
+    security_handler.setFormatter(formatter)
+    security_handler.setLevel(logging.WARNING)
+    
+    # Logger sécurité séparé
+    security_logger = logging.getLogger('payflow.security')
+    security_logger.addHandler(security_handler)
+    security_logger.setLevel(logging.WARNING)
+    
+    # 4. Console pour le développement
+    if app.debug:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        console_handler.setLevel(logging.DEBUG)
+        app.logger.addHandler(console_handler)
+    
+    # Niveau global
+    app.logger.setLevel(logging.INFO)
+    
+    app.logger.info(" PayFlow v1.2 - Système de logging initialisé")
+    return security_logger
+
 def create_app(config_name='default'):
     """Factory pour créer l'application Flask"""
     app = Flask(__name__)
+
+    # Ajouter à votre create_app() ou au début de app.py
+    security_logger = setup_logging(app)
     
     # Configuration
     app.config.from_object(config[config_name])
@@ -67,12 +131,12 @@ def generate_timestamp_folder():
 def debug_page_content(page_text, page_num):
     """Fonction de débogage pour voir le contenu d'une page"""
     lines = page_text.split('\n')
-    print(f"\n--- Contenu de la page {page_num + 1} ---")
+    app.logger.info(f"\n--- Contenu de la page {page_num + 1} ---")
     for i, line in enumerate(lines[:20]):  # Affiche les 20 premières lignes
         line = line.strip()
         if line:  # Ignore les lignes vides
-            print(f"Ligne {i+1}: '{line}'")
-    print("--- Fin du contenu ---\n")
+            app.logger.info(f"Ligne {i+1}: '{line}'")
+    app.logger.info("--- Fin du contenu ---\n")
 
 
 def allowed_file(filename):
@@ -92,10 +156,10 @@ def load_employees():
                 'id': emp.id,
                 'matricule': emp.matricule  # Disponible pour vérifications
             }
-        print(f"📊 {len(employees)} employés chargés (identifiés par matricule)")
+        app.logger.info(f"📊 {len(employees)} employés chargés (identifiés par matricule)")
         return employees
     except Exception as e:
-        print(f"❌ Erreur lors du chargement des employés: {str(e)}")
+        app.logger.error(f"❌ Erreur lors du chargement des employés: {str(e)}")
         return {}
 
 
@@ -104,7 +168,7 @@ def find_employee_by_matricule(matricule):
     try:
         return Employee.query.filter_by(matricule=matricule, statut='actif').first()
     except Exception as e:
-        print(f"❌ Erreur recherche matricule {matricule}: {str(e)}")
+        app.logger.error(f"❌ Erreur recherche matricule {matricule}: {str(e)}")
         return None
 
 @app.route('/')
@@ -116,13 +180,10 @@ def index():
 def upload_file():
     """Traite le fichier PDF uploadé avec débogage"""
     # DÉBOGAGE - à supprimer après test
-    print("=== DÉBOGAGE ===")
-    print(f"request.method: {request.method}")
-    print(f"request.files: {request.files}")
-    print(f"'file' in request.files: {'file' in request.files}")
+
     if 'file' in request.files:
-        print(f"Nom du fichier: {request.files['file'].filename}")
-    print("===============")
+        app.logger.info(f"Nom du fichier chargé: {request.files['file'].filename}")
+    app.logger.info("===============")
 
     """Traite le fichier PDF uploadé avec protection contre les soumissions multiples"""
     global is_processing
@@ -161,8 +222,8 @@ def upload_file():
                 filepath = os.path.join(upload_timestamp_dir, filename)
                 file.save(filepath)
                 
-                print(f"📁 Fichier sauvegardé dans : {upload_timestamp_dir}")
-                print(f"📁 Fichiers de sortie iront dans : {output_timestamp_dir}")
+                #app.logger.info(f"📁 Fichier sauvegardé dans : {upload_timestamp_dir}")
+                #app.logger.info(f"📁 Fichiers de sortie iront dans : {output_timestamp_dir}")
                 
                 # Traitement du PDF avec les nouveaux chemins
                 result = process_pdf(filepath, output_timestamp_dir)
@@ -276,24 +337,24 @@ def create_individual_pdf_with_matricule(pdf_reader, employee_name, page_numbers
             
             # Protection du PDF avec le matricule extrait du PDF
             protect_pdf_with_password(output_path, matricule)
-            print(f"📄 PDF créé et protégé pour {employee_name} avec matricule {matricule} (extrait du PDF)")
+            app.logger.info(f"📄 PDF créé et protégé pour {employee_name} avec matricule {matricule} (extrait du PDF)")
             
             # APPEL CORRIGÉ : Seulement 3 paramètres, SANS le matricule
             if send_email_with_secure_link(employee_name, email, output_path):
-                print(f"✅ Processus complet réussi pour {employee_name}")
+                app.logger.info(f"✅ Processus complet réussi pour {employee_name}")
             else:
-                print(f"❌ Erreur lors de l'envoi pour {employee_name}")
+                app.logger.info(f"❌ Erreur lors de l'envoi pour {employee_name}")
                 
         elif employee_name in employees_data and not matricule:
-            print(f"⚠️ Employé {employee_name} trouvé mais matricule non détecté - PDF créé sans protection")
+            app.logger.info(f"⚠️ Employé {employee_name} trouvé mais matricule non détecté - PDF créé sans protection")
             
         else:
-            print(f"📄 PDF créé SANS protection pour {employee_name} (non trouvé dans employees.csv)")
+            app.logger.info(f"📄 PDF créé SANS protection pour {employee_name} (non trouvé dans employees.csv)")
         
         return True
         
     except Exception as e:
-        print(f"Erreur lors de la création du PDF pour {employee_name}: {str(e)}")
+        app.logger.error(f"Erreur lors de la création du PDF pour {employee_name}: {str(e)}")
         return False
 
 def extract_period_from_page(page_text):
@@ -354,7 +415,7 @@ def extract_period_from_page(page_text):
     # Si aucune date trouvée, utiliser la date actuelle
     from datetime import datetime
     now = datetime.now()
-    print("⚠️ Aucune période trouvée dans le PDF, utilisation de la date actuelle")
+    app.logger.info("⚠️ Aucune période trouvée dans le PDF, utilisation de la date actuelle")
     return now.strftime('%Y_%m')
 
 
@@ -371,7 +432,7 @@ def process_pdf(filepath, output_dir):
         with open(filepath, 'rb') as file:
             pdf_reader = PyPDF2.PdfReader(file)
             total_pages = len(pdf_reader.pages)
-            print(f"📄 Analyse du PDF avec {total_pages} pages...")
+            app.logger.info(f"📄 Analyse du PDF avec {total_pages} pages...")
             
             # Analyse de chaque page
             for page_num in range(total_pages):
@@ -383,11 +444,11 @@ def process_pdf(filepath, output_dir):
                 period = extract_period_from_page(page_text)
                 
                 if employee_name:
-                    print(f"Page {page_num + 1}: Employé trouvé - {employee_name}")
+                    app.logger.info(f"Page {page_num + 1}: Employé trouvé - {employee_name}")
                     if employee_matricule:
-                        print(f"Page {page_num + 1}: Matricule trouvé - {employee_matricule}")
+                        app.logger.info(f"Page {page_num + 1}: Matricule trouvé - {employee_matricule}")
                     if period:
-                        print(f"Page {page_num + 1}: Période trouvée - {period}")
+                        app.logger.info(f"Page {page_num + 1}: Période trouvée - {period}")
                     
                     if employee_name not in employee_data:
                         employee_data[employee_name] = {
@@ -408,7 +469,7 @@ def process_pdf(filepath, output_dir):
             new_employees_count = 0
             
             if new_employees:
-                print(f"\n🆕 Nouveaux employés détectés: {len(new_employees)}")
+                app.logger.info(f"\n🆕 Nouveaux employés détectés: {len(new_employees)}")
                 new_employees_count = add_employees_to_database(new_employees)
                 employees = load_employees()  # Recharger après ajout
                 
@@ -455,7 +516,7 @@ def process_pdf(filepath, output_dir):
                             )
                             db.session.add(traitement_employe)
                     except Exception as e:
-                        print(f"⚠️ Erreur enregistrement traitement pour {employee_name}: {str(e)}")
+                        app.logger.error(f"⚠️ Erreur enregistrement traitement pour {employee_name}: {str(e)}")
         
         # 6. Finalisation (le fichier est maintenant fermé)
         end_time = datetime.now()
@@ -477,7 +538,7 @@ def process_pdf(filepath, output_dir):
         }
         
     except Exception as e:
-        print(f"❌ Erreur lors du traitement: {str(e)}")
+        app.logger.error(f"❌ Erreur lors du traitement: {str(e)}")
         return {
             'success': False,
             'error': str(e)
@@ -492,7 +553,7 @@ def detect_new_employees(employee_data_from_pdf):
         employees_in_db = Employee.query.filter_by(statut='actif').all()
         existing_matricules = {emp.matricule for emp in employees_in_db if emp.matricule}
     except Exception as e:
-        print(f"❌ Erreur lors de la vérification des matricules: {str(e)}")
+        app.logger.info(f"❌ Erreur lors de la vérification des matricules: {str(e)}")
         return []
     
     new_employees = []
@@ -505,7 +566,7 @@ def detect_new_employees(employee_data_from_pdf):
                 'period': data.get('period')
             })
     
-    print(f"🆕 {len(new_employees)} nouveaux employés détectés par matricule")
+    app.logger.info(f"🆕 {len(new_employees)} nouveaux employés détectés par matricule")
     return new_employees
 
 
@@ -516,7 +577,7 @@ def add_employees_to_database(new_employees, source='pdf_import'):
     for emp_data in new_employees:
         try:
             if not emp_data.get('matricule'):
-                print(f"⚠️ Employé {emp_data['nom']} ignoré - matricule manquant")
+                app.logger.info(f"⚠️ Employé {emp_data['nom']} ignoré - matricule manquant")
                 continue
                 
             # Email temporaire basé sur le matricule (plus fiable)
@@ -532,18 +593,18 @@ def add_employees_to_database(new_employees, source='pdf_import'):
             
             db.session.add(new_employee)
             added_count += 1
-            print(f"✅ Employé ajouté: {emp_data['nom']} (Matricule: {emp_data['matricule']})")
+            app.logger.info(f"✅ Employé ajouté: {emp_data['nom']} (Matricule: {emp_data['matricule']})")
             
         except Exception as e:
-            print(f"❌ Erreur lors de l'ajout de {emp_data['nom']}: {str(e)}")
+            app.logger.error(f"❌ Erreur lors de l'ajout de {emp_data['nom']}: {str(e)}")
     
     try:
         db.session.commit()
-        print(f"💾 {added_count} nouveaux employés sauvegardés avec leur matricule")
+        app.logger.info(f"💾 {added_count} nouveaux employés sauvegardés avec leur matricule")
         return added_count
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Erreur lors de la sauvegarde: {str(e)}")
+        app.logger.error(f"❌ Erreur lors de la sauvegarde: {str(e)}")
         return 0
 
 def create_individual_pdf_with_period(pdf_reader, employee_name, page_numbers, matricule, period, employees_data, output_dir):
@@ -575,9 +636,9 @@ def create_individual_pdf_with_period(pdf_reader, employee_name, page_numbers, m
             if employee_record:
                 # Protection avec matricule
                 protect_pdf_with_password(output_path, matricule)
-                print(f"📄 PDF créé et protégé pour {employee_name}")
-                print(f"🔐 Matricule: {matricule}")
-                print(f"📁 Fichier: {output_filename}")
+                app.logger.info(f"📄 PDF créé et protégé pour {employee_name}")
+                app.logger.info(f"🔐 Matricule: {matricule}")
+                app.logger.info(f"📁 Fichier: {output_filename}")
                 
                 # 🔗 NOUVEAU : Génération du lien sécurisé
                 # Récupérer le traitement actuel (vous devrez passer cette info)
@@ -594,23 +655,23 @@ def create_individual_pdf_with_period(pdf_reader, employee_name, page_numbers, m
                     if download_link:
                         # 📧 Envoi email avec lien sécurisé
                         if send_email_with_secure_link(employee_name, employee_record.email, download_link):
-                            print(f"✅ Lien sécurisé envoyé à {employee_name}")
+                            app.logger.info(f"✅ Lien sécurisé envoyé à {employee_name}")
                             return True
                         else:
-                            print(f"❌ Erreur envoi lien pour {employee_name}")
+                            app.logger.error(f"❌ Erreur envoi lien pour {employee_name}")
                     else:
-                        print(f"❌ Erreur génération lien pour {employee_name}")
+                        app.logger.error(f"❌ Erreur génération lien pour {employee_name}")
                 else:
-                    print(f"❌ Traitement non trouvé pour {employee_name}")
+                    app.logger.error(f"❌ Traitement non trouvé pour {employee_name}")
             else:
-                print(f"⚠️ Matricule {matricule} non trouvé en base")
+                app.logger.error(f"⚠️ Matricule {matricule} non trouvé en base")
         
         # Fallback : PDF créé sans envoi
-        print(f"📄 PDF créé pour {employee_name} - pas d'envoi automatique")
+        app.logger.info(f"📄 PDF créé pour {employee_name} - pas d'envoi automatique")
         return True
         
     except Exception as e:
-        print(f"❌ Erreur création PDF pour {employee_name}: {str(e)}")
+        app.logger.error(f"❌ Erreur création PDF pour {employee_name}: {str(e)}")
         return False
 
 def get_current_traitement(output_dir):
@@ -619,7 +680,7 @@ def get_current_traitement(output_dir):
         timestamp_folder = os.path.basename(output_dir)
         return Traitement.query.filter_by(timestamp_folder=timestamp_folder).first()
     except Exception as e:
-        print(f"❌ Erreur récupération traitement: {str(e)}")
+        app.logger.error(f"❌ Erreur récupération traitement: {str(e)}")
         return None
 
 
@@ -631,10 +692,10 @@ def protect_pdf_with_password(filepath, password):
         # Solution 1: Utilisation du paramètre allow_overwriting_input=True
         with pikepdf.open(filepath, allow_overwriting_input=True) as pdf:
             pdf.save(filepath, encryption=pikepdf.Encryption(user=password, owner=password))
-        print(f"PDF protégé avec le mot de passe: {password}")
+        app.logger.info(f"PDF protégé avec le mot de passe: {password}")
         
     except Exception as e:
-        print(f"Erreur lors de la protection du PDF: {str(e)}")
+        app.logger.error(f"Erreur lors de la protection du PDF: {str(e)}")
         
         # Solution alternative si la première ne fonctionne pas
         try:
@@ -646,10 +707,10 @@ def protect_pdf_with_password(filepath, password):
             
             # Remplace le fichier original par le fichier temporaire
             shutil.move(temp_path, filepath)
-            print(f"PDF protégé avec le mot de passe (méthode alternative): {password}")
+            app.logger.info(f"PDF protégé avec le mot de passe (méthode alternative): {password}")
             
         except Exception as e2:
-            print(f"Erreur lors de la protection alternative du PDF: {str(e2)}")
+            app.logger.error(f"Erreur lors de la protection alternative du PDF: {str(e2)}")
 
 def generate_secure_download_link(employee_record, traitement, file_path, matricule):
     """Génère un lien de téléchargement sécurisé"""
@@ -668,11 +729,11 @@ def generate_secure_download_link(employee_record, traitement, file_path, matric
         db.session.add(download_link)
         db.session.commit()
         
-        print(f"🔗 Lien sécurisé généré: {download_link.token[:8]}...")
+        app.logger.info(f"🔗 Lien sécurisé généré: {download_link.token[:8]}...")
         return download_link
         
     except Exception as e:
-        print(f"❌ Erreur génération lien: {str(e)}")
+        app.logger.error(f"❌ Erreur génération lien: {str(e)}")
         db.session.rollback()
         return None
 
@@ -688,7 +749,7 @@ def send_email_with_secure_link(employee_name, email, download_link):
         smtp_password = GMAIL_CONFIG['password']
         
         # URL de téléchargement
-        download_url = f"http://127.0.0.1:5000/download/{download_link.token}"
+        download_url = f"http://91.160.69.7:5000/download/{download_link.token}"
         
         # Création du message
         msg = MIMEMultipart()
@@ -728,11 +789,11 @@ L'équipe RH
         server.sendmail(smtp_username, email, text)
         server.quit()
         
-        print(f"📧 Email avec lien sécurisé envoyé à {employee_name}")
+        app.logger.info(f"📧 Email avec lien sécurisé envoyé à {employee_name}")
         return True
         
     except Exception as e:
-        print(f"❌ Erreur envoi email: {str(e)}")
+        app.logger.error(f"❌ Erreur envoi email: {str(e)}")
         return False
 
     
@@ -800,7 +861,7 @@ def verify_and_download(token):
             flash('Fichier non trouvé sur le serveur', 'error')
             return redirect(url_for('secure_download_page', token=token))
         
-        print(f"✅ Téléchargement autorisé: {download_link.employee.nom_employe}")
+        app.logger.info(f"✅ Téléchargement autorisé: {download_link.employee.nom_employe}")
         
         return send_file(
             download_link.chemin_fichier,
@@ -1027,7 +1088,7 @@ def calculate_stats_from_db():
         }
         
     except Exception as e:
-        print(f"❌ Erreur calcul stats DB: {str(e)}")
+        app.logger.error(f"❌ Erreur calcul stats DB: {str(e)}")
         return {
             'total_treatments': 0,
             'total_employees': 0,
@@ -1064,7 +1125,7 @@ def get_treatments_from_db():
         return treatments
         
     except Exception as e:
-        print(f"❌ Erreur récupération traitements DB: {str(e)}")
+        app.logger.error(f"❌ Erreur récupération traitements DB: {str(e)}")
         return []
 
 
@@ -1355,7 +1416,7 @@ def get_v12_dashboard_stats():
         return stats
         
     except Exception as e:
-        print(f"❌ Erreur calcul stats v1.2: {str(e)}")
+        app.logger.error(f"❌ Erreur calcul stats v1.2: {str(e)}")
         return {}
 
 def get_treatment_activity_chart():
@@ -1388,7 +1449,7 @@ def get_treatment_activity_chart():
         }
         
     except Exception as e:
-        print(f"❌ Erreur graphique activité: {str(e)}")
+        app.logger.error(f"❌ Erreur graphique activité: {str(e)}")
         return {'labels': [], 'data': []}
 
 def get_employee_top_stats():
@@ -1414,7 +1475,7 @@ def get_employee_top_stats():
         ]
         
     except Exception as e:
-        print(f"❌ Erreur top employés: {str(e)}")
+        app.logger.error(f"❌ Erreur top employés: {str(e)}")
         return []
 
 def get_download_security_stats():
@@ -1438,7 +1499,7 @@ def get_download_security_stats():
         ]
         
     except Exception as e:
-        print(f"❌ Erreur stats sécurité: {str(e)}")
+        app.logger.error(f"❌ Erreur stats sécurité: {str(e)}")
         return []
 
 def get_recent_activity():
@@ -1463,7 +1524,7 @@ def get_recent_activity():
         }
         
     except Exception as e:
-        print(f"❌ Erreur activité récente: {str(e)}")
+        app.logger.error(f"❌ Erreur activité récente: {str(e)}")
         return {'treatments': [], 'downloads': []}
 
 # Routes de maintenance système
@@ -1570,7 +1631,7 @@ def get_maintenance_stats():
         }
         
     except Exception as e:
-        print(f"❌ Erreur stats maintenance: {str(e)}")
+        app.logger.error(f"❌ Erreur stats maintenance: {str(e)}")
         return {}
 
 def analyze_old_files():
@@ -1603,7 +1664,7 @@ def analyze_old_files():
         }
         
     except Exception as e:
-        print(f"❌ Erreur analyse fichiers anciens: {str(e)}")
+        app.logger.error(f"❌ Erreur analyse fichiers anciens: {str(e)}")
         return {'count': 0, 'size': 0}
 
 def get_folder_size(folder_path):
@@ -1952,10 +2013,72 @@ def format_file_size(size_bytes):
     return f"{size_bytes:.1f} {size_names[i]}"
 
 
+@app.route('/admin/logs')
+def view_logs():
+    """Interface de consultation des logs"""
+    try:
+        log_type = request.args.get('type', 'general')
+        lines = int(request.args.get('lines', 100))
+        
+        log_files = {
+            'general': 'logs/payflow.log',
+            'errors': 'logs/payflow_errors.log', 
+            'security': 'logs/payflow_security.log'
+        }
+        
+        log_file = log_files.get(log_type, 'logs/payflow.log')
+        log_content = []
+        
+        if os.path.exists(log_file):
+            with open(log_file, 'r', encoding='utf-8') as f:
+                log_content = f.readlines()[-lines:]  # Dernières lignes
+        
+        # Statistiques des logs
+        log_stats = {
+            'general_size': get_file_size('logs/payflow.log'),
+            'errors_size': get_file_size('logs/payflow_errors.log'),
+            'security_size': get_file_size('logs/payflow_security.log'),
+            'total_lines': len(log_content)
+        }
+        
+        return render_template('admin/logs.html', 
+                             log_content=log_content,
+                             log_type=log_type,
+                             log_stats=log_stats,
+                             lines=lines)
+        
+    except Exception as e:
+        app.logger.error(f"❌ Erreur consultation logs: {str(e)}")
+        flash(f'Erreur lors de la consultation des logs: {str(e)}', 'error')
+        return redirect(url_for('dashboard'))
+
+def get_file_size(filepath):
+    """Retourne la taille d'un fichier formatée"""
+    try:
+        if os.path.exists(filepath):
+            size = os.path.getsize(filepath)
+            return format_file_size(size)
+        return "0 B"
+    except:
+        return "N/A"
+
+
 if __name__ == '__main__':
     # Création des dossiers s'ils n'existent pas
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
     
-    app.run(debug=True)
+    # ❌ SUPPRIMER cette ligne (cause le conflit)
+    # app.run(debug=True)
+    
+    # ✅ GARDER seulement cette configuration
+    print("🚀 PayFlow v1.2 - Démarrage sur http://91.160.69.7:5000")
+    print("📡 Application accessible depuis le réseau local")
+    
+    app.run(
+        host='0.0.0.0',      # Écoute sur toutes les interfaces (permet 91.160.69.7)
+        port=5000,           # Port 5000
+        debug=False,         # Désactiver debug pour sécurité et accès externe
+        threaded=True        # Support multi-utilisateurs
+    )
 

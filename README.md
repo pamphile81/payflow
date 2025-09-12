@@ -1,142 +1,75 @@
-**Application web automatique de gestion et distribution des fiches de paie avec Dashboard**
 
-![Version](https://img.shields.io/badge/version-1.1-blue.svg)
-![Python](https://img.shields.io/badge/python-3.7+-green.svg)
-![License](https://img.shields.io/badge/license-MIT-yellow.svg)
+# PayFlow v1.2 - Gestionnaire de Fiches de Paie Automatisé
 
----
+🚀 **Application Flask complète pour la gestion et distribution automatisée des fiches de paie**
 
-## 🆕 Nouveautés v1.1
+## ✨ Fonctionnalités v1.2
 
-### 🎨 Interface moderne
-- **Design Tailwind CSS** : Interface responsive avec dégradés modernes
-- **Zone drag & drop** : Upload de fichiers par glisser-déposer
-- **Cartes d'information** : Présentation claire des fonctionnalités
-- **Mobile-friendly** : Compatible tous écrans
+### 🎯 Fonctionnalités principales
+- **📄 Traitement PDF intelligent** : Découpage automatique des PDFs multi-employés
+- **🔐 Protection sécurisée** : Chaque fiche protégée par le matricule employé
+- **📧 Distribution par liens** : Envoi de liens de téléchargement sécurisés
+- **👥 Gestion des employés** : Interface complète CRUD avec restrictions
+- **📊 Dashboard analytique** : Statistiques temps réel et historique
+- **🛠️ Maintenance système** : Nettoyage automatique et optimisation
+- **🗃️ Base PostgreSQL** : Stockage robuste avec migration automatique
 
-### 📊 Dashboard complet
-- **Statistiques globales** : Traitements, employés, fichiers, taux de réussite
-- **Historique chronologique** : Détails de tous les traitements effectués  
-- **Téléchargements directs** : Liens pour chaque PDF généré
-- **Visualisation des résultats** : Liste des fiches créées par session
+### 🆕 Nouveautés v1.2
+- **Auto-import employés** depuis les PDFs traités
+- **Téléchargements sécurisés** avec authentification par matricule
+- **Gestion différenciée** : Restrictions pour employés importés PDF
+- **Interface moderne** : Templates responsive et intuitifs
+- **Détails des traitements** : Visualisation et téléchargement des PDFs générés
+- **Maintenance avancée** : Outils de nettoyage et optimisation
 
-### 🗂️ Gestion avancée des fichiers
-- **Téléchargement individuel** : Récupération de chaque PDF via le dashboard
-- **Nettoyage automatique** : Suppression des fichiers > 30 jours
-- **Navigation fluide** : Liens entre interface principale et dashboard
-- **Messages contextuels** : Confirmations et alertes intégrées
+## 🏗️ Architecture Technique
 
-### 🔧 Améliorations techniques
-- **Extraction de période** : Nomenclature `NOM_EMPLOYE_YYYY_MM.pdf`
-- **Configuration externalisée** : Séparation des paramètres SMTP
-- **Protection robuste** : Threading locks contre traitements simultanés
-- **Logs détaillés** : Suivi complet avec debug intégré
+### Technologies utilisées
+- **Backend** : Python 3.7+ / Flask 2.3+
+- **Base de données** : PostgreSQL avec SQLAlchemy
+- **Frontend** : HTML5 / CSS3 / JavaScript ES6
+- **Traitement PDF** : PyPDF2 / pikepdf
+- **Email** : SMTP avec authentification sécurisée
+- **Sécurité** : Liens tokenisés / Authentification matricule
 
----
+### Structure du projet
+payflow/
+├── app.py # Application Flask principale
+├── models.py # Modèles de données SQLAlchemy
+├── email_config.py # Configuration SMTP
+├── requirements.txt # Dépendances Python
+├── templates/
+│ ├── index.html # Page d'upload
+│ ├── dashboard_simple_v12.html # Dashboard principal
+│ ├── secure_download.html # Interface téléchargement
+│ └── admin/ # Templates administration
+│ ├── manage_employees.html
+│ ├── add_employee.html
+│ ├── edit_employee.html
+│ ├── maintenance.html
+│ └── treatment_details.html
+├── uploads/ # PDFs uploadés (temporaire)
+├── output/ # PDFs individuels générés
+└── migrations/ # Migrations base de données
 
-# PayFlow v1.0 🚀
+text
 
-**Application web automatique de gestion et distribution des fiches de paie**
-
-![Version](https://img.shields.io/badge/version-1.0-blue.svg)
-![Python](https://img.shields.io/badge/python-3.7+-green.svg)
-![License](https://img.shields.io/badge/license-MIT-yellow.svg)
-
----
-
-## 📋 Table des matières
-
-- [🎯 Présentation](#-présentation)
-- [✨ Fonctionnalités](#-fonctionnalités)  
-- [🛠️ Technologies](#️-technologies)
-- [📦 Installation](#-installation)
-- [⚙️ Configuration](#️-configuration)
-- [🚀 Utilisation](#-utilisation)
-- [📁 Structure des fichiers](#-structure-des-fichiers)
-- [🔒 Sécurité](#-sécurité)
-- [🤝 Contribution](#-contribution)
-- [📄 Licence](#-licence)
-
----
-
-## 🎯 Présentation
-
-PayFlow automatise entièrement le processus de distribution des fiches de paie en entreprise. L'application analyse un fichier PDF contenant plusieurs bulletins de paie, découpe automatiquement chaque fiche individuelle, la protège par mot de passe, et l'envoie directement à l'employé concerné par email.
-
-### 🎪 Cas d'usage
-
-- **PME/ETI** : Automatisation complète de la distribution mensuelle
-- **Services RH** : Gain de temps considérable sur les tâches répétitives
-- **Comptabilité** : Traçabilité parfaite et archivage automatique
-- **Conformité RGPD** : Sécurisation maximale des données sensibles
-
----
-
-## ✨ Fonctionnalités
-
-### 🔍 Analyse intelligente
-- **Reconnaissance automatique** des noms d'employés dans les PDFs
-- **Extraction du matricule** directement depuis le bulletin de paie
-- **Détection de la période** (année/mois) du bulletin traité
-- **Support multi-pages** par employé
-
-### 🔒 Sécurité renforcée
-- **Protection par matricule** : Chaque PDF est protégé par le matricule de l'employé (extrait du bulletin)
-- **Aucune transmission du mot de passe** : Le matricule n'est jamais envoyé par email
-- **Isolation des données** : Chaque traitement est isolé dans un dossier horodaté
-- **Base CSV sécurisée** : Seuls nom et email stockés (pas de matricule)
-
-### 📧 Distribution automatique
-- **Envoi email automatique** vers chaque employé
-- **Support multi-providers** : Gmail, Outlook, Yahoo, SMTP personnalisé
-- **Messages personnalisés** avec instructions d'ouverture
-- **Gestion des erreurs d'envoi** avec logs détaillés
-
-### 🗂️ Organisation avancée
-- **Horodatage automatique** : Format `aaaammjjhhmmss`
-- **Nomenclature intelligente** : `NOM_EMPLOYE_YYYY_MM.pdf`
-- **Archivage structuré** : uploads/20250827095430/ ← PDF original ; output/20250827095430/ ← Fiches individuelles
-- **Traçabilité complète** : Aucun écrasement de fichiers possible
-
-### 🛡️ Robustesse
-- **Protection anti-clics multiples** : Prévention des traitements simultanés
-- **Validation des données** : Vérification des formats et contenu
-- **Logs détaillés** : Suivi complet des opérations
-- **Gestion d'erreurs** : Recovery automatique et messages explicites
-
----
-
-## 🛠️ Technologies
-
-### Backend
-- **Python 3.7+** : Langage principal
-- **Flask 2.3+** : Framework web léger et robuste
-- **PyPDF2 3.0+** : Manipulation et analyse des PDFs
-- **pikepdf 8.7+** : Protection par mot de passe des PDFs
-
-### Frontend
-- **HTML5** : Structure sémantique
-- **CSS3** : Styles responsives avec animations
-- **JavaScript ES6** : Interactions utilisateur et validations
-
-### Email et sécurité
-- **SMTP intégré** : Support natif des principaux providers
-- **Threading** : Gestion des processus simultanés
-- **Regex avancées** : Extraction précise des données
-
----
-
-## 📦 Installation
+## 🚀 Installation et Déploiement
 
 ### Prérequis
-- **Python 3.7+**
-- **Compte email** avec authentification 2FA (Gmail recommandé)
-- **Fichier PDF** contenant les bulletins de paie
+Système requis
+Python 3.7 ou supérieur
+
+PostgreSQL 12+
+
+Git
+
+Compte email avec authentification 2FA (recommandé Gmail)
+text
 
 ### Installation rapide
-
 1. Cloner le repository
-git clone https://github.com/pamphile81/payflow.git
+git clone https://github.com/votre-username/payflow.git
 cd payflow
 
 2. Créer l'environnement virtuel
@@ -146,144 +79,201 @@ python -m venv venv
 Windows
 venv\Scripts\activate
 
-macOS/Linux
+Linux/Mac
 source venv/bin/activate
 
 4. Installer les dépendances
 pip install -r requirements.txt
 
-5. Lancer l'application
+5. Configurer PostgreSQL
+createdb payflow_db
+createuser payflow_user --password
+
+6. Configurer l'email dans email_config.py
+cp email_config.py.example email_config.py
+
+Éditer avec vos paramètres SMTP
+7. Initialiser la base de données
+flask db init
+flask db migrate -m "Initial migration"
+flask db upgrade
+
+8. Lancer l'application
 python app.py
 
-L'application sera accessible sur `http://127.0.0.1:5000`
+text
 
----
+### Accès à l'application
+- **Interface principale** : http://127.0.0.1:5000
+- **Dashboard** : http://127.0.0.1:5000/dashboard
+- **Gestion employés** : http://127.0.0.1:5000/admin/employees
+- **Maintenance** : http://127.0.0.1:5000/admin/maintenance
 
-## ⚙️ Configuration
+## 📖 Guide d'utilisation
 
-### 1. Base de données des employés
+### 1. Configuration initiale
+1. **Configurer SMTP** dans `email_config.py`
+2. **Ajouter des employés** via l'interface ou CSV
+3. **Tester avec un PDF** de démonstration
 
-Créez/modifiez le fichier `employees.csv` :
-nom_employe,email
-DUPONT JEAN MARIE,jean.dupont@entreprise.com
-MARTIN SOPHIE CLAIRE,sophie.martin@entreprise.com
-BERNARD ALEXANDRE,alexandre.bernard@entreprise.com
+### 2. Traitement des fiches de paie
+1. **Accéder** à l'interface d'upload
+2. **Sélectionner** votre PDF multi-employés  
+3. **Lancer** le traitement automatique
+4. **Vérifier** les résultats dans le dashboard
 
+### 3. Gestion des employés
+- **Ajout manuel** : Interface dédiée avec validation
+- **Import automatique** : Détection lors du traitement PDF
+- **Modification** : Restrictions selon la source (PDF vs manuel)
+- **Export** : Sauvegarde CSV de la base employés
 
-⚠️ **Important** : Le matricule n'est pas stocké dans ce fichier pour des raisons de sécurité. Il est extrait directement du bulletin de paie.
+### 4. Téléchargements sécurisés
+- **Liens par email** : Envoi automatique aux employés
+- **Authentification** : Matricule requis pour accéder
+- **Expiration** : Liens valides 30 jours par défaut
+- **Audit** : Traçabilité complète des accès
 
-### 2. Configuration email
+## 🔧 Configuration Avancée
 
-Dans le fichier `app.py`, modifiez la fonction `send_email_with_pdf` :
-smtp_server = "smtp.gmail.com" # Votre serveur SMTP
-smtp_port = 587 # Port SMTP
-smtp_username = "votre-email@gmail.com" # Votre email
-smtp_password = "mot-de-passe-app" # Mot de passe d'application 
+### Variables d'environnement
+Database
+DATABASE_URL=postgresql://payflow_user:password@localhost/payflow_db
 
+Email
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=votre-email@gmail.com
+SMTP_PASSWORD=votre-mot-de-passe-app
 
-### 3. Configuration Gmail (recommandée)
+Security
+SECRET_KEY=votre-clé-secrète-très-longue
+DOWNLOAD_EXPIRY_DAYS=30
+MAX_ATTEMPTS=10
 
-1. **Activez l'authentification 2FA** sur votre compte Google
-2. **Générez un mot de passe d'application** :
-   - Allez sur https://myaccount.google.com/security
-   - "Mots de passe des applications" → "Autre" → "PayFlow"
-   - Copiez le mot de passe généré (16 caractères)
-3. **Utilisez ce mot de passe** dans la configuration
+text
 
----
-
-## 🚀 Utilisation
-
-### Interface web
-
-1. **Accédez** à http://127.0.0.1:5000
-2. **Sélectionnez** votre fichier PDF multi-fiches
-3. **Cliquez** sur "Traiter le fichier"
-4. **Attendez** le traitement automatique
-5. **Vérifiez** les logs dans le terminal
-
-### Processus automatisé
-
-PDF multi-fiches
-↓
-Analyse + reconnaissance des employés
-↓
-Extraction matricule + période
-↓
-Découpage individuel
-↓
-Protection par matricule
-↓
-Envoi email automatique
-↓
-Archivage horodaté
-
-
----
-
-## 📁 Structure des fichiers
-
-payflow/
-├── app.py # Application principale Flask
-├── employees.csv # Base de données employés (nom + email)
-├── requirements.txt # Dépendances Python
-├── README.md # Documentation complète
-├── .gitignore # Fichiers ignorés par Git
-├── templates/
-│ └── index.html # Interface utilisateur web
-├── uploads/
-│ └── 20250827095430/ # PDFs originaux horodatés
-│ └── bulletin_paie.pdf
-├── output/
-│ └── 20250827095430/ # Fiches individuelles horodatées
-│ ├── DUPONT_JEAN_MARIE_2025_08.pdf
-│ └── MARTIN_SOPHIE_CLAIRE_2025_08.pdf
-└── venv/ # Environnement virtuel Python
+### Personnalisation
+- **Templates** : Modifier les fichiers HTML dans `/templates/`
+- **Emails** : Personnaliser les messages dans les fonctions d'envoi
+- **Sécurité** : Ajuster les paramètres d'expiration et tentatives
+- **Logos** : Remplacer les émoticônes par vos logos d'entreprise
 
 ## 🔒 Sécurité
 
-### Principe de sécurité par conception
-
-- **Aucun stockage du matricule** : Extrait uniquement du PDF source
-- **Transmission sécurisée** : Le matricule n'est jamais envoyé par email  
-- **Isolation des traitements** : Chaque session dans un dossier unique
-- **Authentification robuste** : Support 2FA et mots de passe d'application
+### Mesures implémentées
+- **🔐 Authentification matricule** pour chaque téléchargement
+- **⏰ Expiration automatique** des liens de téléchargement  
+- **🚫 Limitation des tentatives** d'accès par lien
+- **📝 Audit complet** des actions utilisateurs
+- **🛡️ Protection CSRF** sur tous les formulaires
+- **🔒 PDFs chiffrés** avec mots de passe individuels
 
 ### Bonnes pratiques
+- Utiliser **HTTPS en production**
+- Configurer **mots de passe forts** pour la base
+- **Sauvegarder régulièrement** via l'interface maintenance
+- **Nettoyer périodiquement** les fichiers temporaires
 
-- ✅ Utilisez des mots de passe d'application (pas votre mot de passe principal)
-- ✅ Activez l'authentification 2FA sur votre compte email
-- ✅ Limitez les accès au serveur hébergeant PayFlow
-- ✅ Sauvegardez régulièrement le fichier `employees.csv`
-- ✅ Nettoyez périodiquement les dossiers `uploads/` et `output/`
+## 📊 Monitoring et Maintenance
 
----
+### Dashboard de surveillance
+- **Statistiques temps réel** : Traitements, employés, téléchargements
+- **Indicateurs de sécurité** : Tentatives bloquées, incidents
+- **Historique complet** : Tous les traitements avec détails
+- **État système** : Santé globale de l'application
+
+### Outils de maintenance
+- **Nettoyage automatique** : Suppression fichiers expirés
+- **Sauvegarde base** : Export PostgreSQL intégré  
+- **Optimisation** : VACUUM ANALYZE automatique
+- **Logs détaillés** : Traçabilité complète des opérations
 
 ## 🤝 Contribution
 
-Les contributions sont les bienvenues ! Pour contribuer :
+### Pour les développeurs
+Setup développement
+git clone https://github.com/votre-username/payflow.git
+cd payflow
+python -m venv venv
+source venv/bin/activate # ou venv\Scripts\activate sur Windows
+pip install -r requirements.txt
 
-1. **Fork** le repository
-2. **Créez** une branche feature (`git checkout -b feature/nouvelle-fonctionnalite`)  
-3. **Committez** vos changements (`git commit -am 'Ajout nouvelle fonctionnalité'`)
-4. **Pushez** vers la branche (`git push origin feature/nouvelle-fonctionnalite`)
-5. **Créez** une Pull Request
+Tests
+python -m pytest tests/
 
-### Roadmap
+Nouveau feature
+git checkout -b feature/nouvelle-fonctionnalité
 
-- **v1.1** : Interface utilisateur améliorée + dashboard
-- **v1.2** : Gestion web des employés + statistiques  
-- **v2.0** : Migration PostgreSQL + multi-utilisateurs
+... développement ...
+git commit -m "feat: description de la fonctionnalité"
+git push origin feature/nouvelle-fonctionnalité
 
----
+text
+
+### Standards de code
+- **PEP 8** pour Python
+- **Commentaires** en français dans le code
+- **Templates** responsives et accessibles
+- **Messages** utilisateur clairs et informatifs
+
+## 📝 Changelog
+
+### v1.2.0 (2025-09-12)
+#### ✨ Ajouts
+- Interface complète de gestion des employés
+- Téléchargements sécurisés avec authentification matricule
+- Auto-import des employés depuis les PDFs
+- Page de maintenance avec outils de nettoyage
+- Dashboard enrichi avec détails des traitements
+- Migration PostgreSQL avec données historiques
+- Templates modernes et responsives
+
+#### 🔧 Améliorations  
+- Restrictions de modification pour employés PDF
+- Navigation améliorée entre les sections
+- Gestion d'erreurs renforcée
+- Performance optimisée des requêtes
+- Interface utilisateur moderne et intuitive
+
+#### 🐛 Corrections
+- Problèmes de templating JavaScript
+- Gestion des caractères spéciaux dans les noms
+- Validation des données utilisateur
+- Stabilité des téléchargements
+
+### v1.1.0 (2025-09-10)
+#### ✨ Ajouts
+- Dashboard avec statistiques
+- Nettoyage automatique des fichiers
+- Interface responsive améliorée
+
+### v1.0.0 (2025-09-08)
+#### ✨ Version initiale
+- Traitement PDF de base
+- Protection par mot de passe
+- Envoi email avec pièces jointes
 
 ## 📄 Licence
 
 Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
 
+## 🆘 Support
+
+### Documentation
+- **Wiki** : [Documentation complète](https://github.com/votre-username/payflow/wiki)
+- **FAQ** : [Questions fréquentes](https://github.com/votre-username/payflow/wiki/FAQ)
+- **Tutoriels** : [Guides pas à pas](https://github.com/votre-username/payflow/wiki/Tutorials)
+
+### Obtenir de l'aide
+- **Issues** : [Signaler un bug](https://github.com/votre-username/payflow/issues)
+- **Discussions** : [Forum communautaire](https://github.com/votre-username/payflow/discussions)
+- **Email** : support@payflow.com
+
 ---
 
-**Développé avec ❤️ pour simplifier la gestion RH**
+## ⭐ Remerciements
 
-*PayFlow v1.0 - Automatisation intelligente des fiches de paie*
+Merci à tous les contributeurs qui ont rendu PayFlow possible !
 
+**PayFlow v1.2** - Automatisation intelligente des fiches de paie 🚀
