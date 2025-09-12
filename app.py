@@ -21,6 +21,7 @@ import hashlib
 import secrets
 import logging
 from logging.handlers import RotatingFileHandler
+import glob
 
 # Import des modèles et configuration
 from config import config
@@ -749,7 +750,7 @@ def send_email_with_secure_link(employee_name, email, download_link):
         smtp_password = GMAIL_CONFIG['password']
         
         # URL de téléchargement
-        download_url = f"http://91.160.69.7:5000/download/{download_link.token}"
+        download_url = f"https://91.160.69.7:5000/download/{download_link.token}"
         
         # Création du message
         msg = MIMEMultipart()
@@ -2062,23 +2063,26 @@ def get_file_size(filepath):
     except:
         return "N/A"
 
-
+# Démarrage de l'application
 if __name__ == '__main__':
-    # Création des dossiers s'ils n'existent pas
+    # Création des dossiers
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-    
-    # ❌ SUPPRIMER cette ligne (cause le conflit)
-    # app.run(debug=True)
-    
-    # ✅ GARDER seulement cette configuration
-    print("🚀 PayFlow v1.2 - Démarrage sur http://91.160.69.7:5000")
-    print("📡 Application accessible depuis le réseau local")
-    
+
+    # Certificats mkcert
+    cert_file = '192.168.1.55+2.pem'
+    key_file = '192.168.1.55+2-key.pem'
+
+    print("🔒 PayFlow v1.2 - HTTPS sécurisé")
+    print("🌐 Accès : https://192.168.1.55:5000")
+
     app.run(
-        host='0.0.0.0',      # Écoute sur toutes les interfaces (permet 91.160.69.7)
-        port=5000,           # Port 5000
-        debug=False,         # Désactiver debug pour sécurité et accès externe
-        threaded=True        # Support multi-utilisateurs
+        host='0.0.0.0',
+        port=5000,
+        debug=False,
+        threaded=True,
+        ssl_context=(cert_file, key_file)
     )
+
+
 

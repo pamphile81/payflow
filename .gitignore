@@ -16,3 +16,11 @@ config.py
 # Fichiers système
 .DS_Store
 Thumbs.db
+
+# Certificats SSL
+192.168.1.55+2-key.pem
+192.168.1.55+2.pem
+check_ssl.py
+generate_ssl_cert.py
+mkcert.exe
+ssl/
