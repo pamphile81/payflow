@@ -1,5 +1,5 @@
 # app.py - Version v1.2 avec PostgreSQL
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, session
 import os
 import csv
 from werkzeug.utils import secure_filename
@@ -129,7 +129,8 @@ def generate_timestamp_folder():
     now = datetime.now()
     return now.strftime('%Y%m%d%H%M%S')
 
-def debug_page_content(page_text, page_num):
+'''
+    def debug_page_content(page_text, page_num):
     """Fonction de débogage pour voir le contenu d'une page"""
     lines = page_text.split('\n')
     app.logger.info(f"\n--- Contenu de la page {page_num + 1} ---")
@@ -138,6 +139,7 @@ def debug_page_content(page_text, page_num):
         if line:  # Ignore les lignes vides
             app.logger.info(f"Ligne {i+1}: '{line}'")
     app.logger.info("--- Fin du contenu ---\n")
+'''
 
 
 def allowed_file(filename):
@@ -151,16 +153,16 @@ def load_employees():
     try:
         employees_list = Employee.query.filter_by(statut='actif').all()
         for emp in employees_list:
-            # ✅ Clé par nom ET matricule pour compatibilité
+            # Clé par nom ET matricule pour compatibilité
             employees[emp.nom_employe] = {
                 'email': emp.email,
                 'id': emp.id,
-                'matricule': emp.matricule  # Disponible pour vérifications
+                'matricule': emp.matricule  
             }
-        app.logger.info(f"📊 {len(employees)} employés chargés (identifiés par matricule)")
+        #app.logger.info(f"{len(employees)} employés chargés (identifiés par matricule)")
         return employees
     except Exception as e:
-        app.logger.error(f"❌ Erreur lors du chargement des employés: {str(e)}")
+        app.logger.error(f"Erreur lors du chargement des employés: {str(e)}")
         return {}
 
 
@@ -169,7 +171,7 @@ def find_employee_by_matricule(matricule):
     try:
         return Employee.query.filter_by(matricule=matricule, statut='actif').first()
     except Exception as e:
-        app.logger.error(f"❌ Erreur recherche matricule {matricule}: {str(e)}")
+        app.logger.error(f"Erreur recherche matricule {matricule}: {str(e)}")
         return None
 
 @app.route('/')
@@ -177,14 +179,13 @@ def index():
     """Page d'accueil avec formulaire d'upload"""
     return render_template('index.html')
 
-@app.route('/upload', methods=['POST'])  # IMPORTANT: Cette ligne doit être exactement comme ça
+@app.route('/upload', methods=['POST'])  
 def upload_file():
     """Traite le fichier PDF uploadé avec débogage"""
-    # DÉBOGAGE - à supprimer après test
 
-    if 'file' in request.files:
-        app.logger.info(f"Nom du fichier chargé: {request.files['file'].filename}")
-    app.logger.info("===============")
+    #if 'file' in request.files:
+     #   app.logger.info(f"Nom du fichier chargé: {request.files['file'].filename}")
+    #app.logger.info("===============")
 
     """Traite le fichier PDF uploadé avec protection contre les soumissions multiples"""
     global is_processing
@@ -192,7 +193,7 @@ def upload_file():
     # Vérification côté serveur pour empêcher les traitements multiples
     with processing_lock:
         if is_processing:
-            flash('⚠️ Un traitement est déjà en cours. Veuillez patienter.', 'error')
+            flash('Un traitement est déjà en cours. Veuillez patienter.', 'error')
             return redirect(request.url)
         is_processing = True
     
@@ -222,9 +223,6 @@ def upload_file():
                 filename = secure_filename(file.filename)
                 filepath = os.path.join(upload_timestamp_dir, filename)
                 file.save(filepath)
-                
-                #app.logger.info(f"📁 Fichier sauvegardé dans : {upload_timestamp_dir}")
-                #app.logger.info(f"📁 Fichiers de sortie iront dans : {output_timestamp_dir}")
                 
                 # Traitement du PDF avec les nouveaux chemins
                 result = process_pdf(filepath, output_timestamp_dir)
@@ -310,7 +308,6 @@ def extract_employee_matricule_from_page(page_text):
                 matricule_match = re.search(r'^(\d{4})(?:\s|$)', next_line)
                 if matricule_match:
                     return matricule_match.group(1)
-    
     return None
 
 def create_individual_pdf_with_matricule(pdf_reader, employee_name, page_numbers, matricule, employees_data, output_dir):
@@ -338,19 +335,18 @@ def create_individual_pdf_with_matricule(pdf_reader, employee_name, page_numbers
             
             # Protection du PDF avec le matricule extrait du PDF
             protect_pdf_with_password(output_path, matricule)
-            app.logger.info(f"📄 PDF créé et protégé pour {employee_name} avec matricule {matricule} (extrait du PDF)")
+           # app.logger.info(f"PDF créé et protégé pour {employee_name} avec matricule {matricule} (extrait du PDF)")
             
-            # APPEL CORRIGÉ : Seulement 3 paramètres, SANS le matricule
             if send_email_with_secure_link(employee_name, email, output_path):
-                app.logger.info(f"✅ Processus complet réussi pour {employee_name}")
+                app.logger.info(f"Processus complet réussi pour {employee_name}")
             else:
-                app.logger.info(f"❌ Erreur lors de l'envoi pour {employee_name}")
+                app.logger.info(f"Erreur lors de l'envoi pour {employee_name}")
                 
         elif employee_name in employees_data and not matricule:
-            app.logger.info(f"⚠️ Employé {employee_name} trouvé mais matricule non détecté - PDF créé sans protection")
+            app.logger.info(f"Employé {employee_name} trouvé mais matricule non détecté - PDF créé sans protection")
             
         else:
-            app.logger.info(f"📄 PDF créé SANS protection pour {employee_name} (non trouvé dans employees.csv)")
+            app.logger.info(f"PDF créé SANS protection pour {employee_name} ")
         
         return True
         
@@ -416,12 +412,12 @@ def extract_period_from_page(page_text):
     # Si aucune date trouvée, utiliser la date actuelle
     from datetime import datetime
     now = datetime.now()
-    app.logger.info("⚠️ Aucune période trouvée dans le PDF, utilisation de la date actuelle")
+    #app.logger.info("Aucune période trouvée dans le PDF, utilisation de la date actuelle")
     return now.strftime('%Y_%m')
 
 
 def process_pdf(filepath, output_dir):
-    """Fonction principale avec auto-import des employés - CORRIGÉE"""
+    """Fonction principale avec auto-import des employés """
     start_time = datetime.now()
     
     try:
@@ -433,7 +429,7 @@ def process_pdf(filepath, output_dir):
         with open(filepath, 'rb') as file:
             pdf_reader = PyPDF2.PdfReader(file)
             total_pages = len(pdf_reader.pages)
-            app.logger.info(f"📄 Analyse du PDF avec {total_pages} pages...")
+            #app.logger.info(f"Analyse du PDF avec {total_pages} pages...")
             
             # Analyse de chaque page
             for page_num in range(total_pages):
@@ -470,7 +466,7 @@ def process_pdf(filepath, output_dir):
             new_employees_count = 0
             
             if new_employees:
-                app.logger.info(f"\n🆕 Nouveaux employés détectés: {len(new_employees)}")
+                app.logger.info(f"\n Nouveaux employés détectés: {len(new_employees)}")
                 new_employees_count = add_employees_to_database(new_employees)
                 employees = load_employees()  # Recharger après ajout
                 
@@ -490,11 +486,11 @@ def process_pdf(filepath, output_dir):
             db.session.add(traitement)
             db.session.commit()
             
-            # 5. ✅ Création des PDF individuels PENDANT que le fichier est ouvert
+            # 5.  Création des PDF individuels PENDANT que le fichier est ouvert
             processed_count = 0
             for employee_name, data in employee_data.items():
                 if create_individual_pdf_with_period(
-                    pdf_reader,  # ✅ Le fichier est encore ouvert ici
+                    pdf_reader,  #  Le fichier est encore ouvert ici
                     employee_name,
                     data['pages'],
                     data['matricule'],
@@ -517,7 +513,7 @@ def process_pdf(filepath, output_dir):
                             )
                             db.session.add(traitement_employe)
                     except Exception as e:
-                        app.logger.error(f"⚠️ Erreur enregistrement traitement pour {employee_name}: {str(e)}")
+                        app.logger.error(f"Erreur enregistrement traitement pour {employee_name}: {str(e)}")
         
         # 6. Finalisation (le fichier est maintenant fermé)
         end_time = datetime.now()
@@ -539,7 +535,7 @@ def process_pdf(filepath, output_dir):
         }
         
     except Exception as e:
-        app.logger.error(f"❌ Erreur lors du traitement: {str(e)}")
+        app.logger.error(f" Erreur lors du traitement: {str(e)}")
         return {
             'success': False,
             'error': str(e)
@@ -554,7 +550,7 @@ def detect_new_employees(employee_data_from_pdf):
         employees_in_db = Employee.query.filter_by(statut='actif').all()
         existing_matricules = {emp.matricule for emp in employees_in_db if emp.matricule}
     except Exception as e:
-        app.logger.info(f"❌ Erreur lors de la vérification des matricules: {str(e)}")
+        app.logger.error(f"Erreur lors de la vérification des matricules: {str(e)}")
         return []
     
     new_employees = []
@@ -567,7 +563,7 @@ def detect_new_employees(employee_data_from_pdf):
                 'period': data.get('period')
             })
     
-    app.logger.info(f"🆕 {len(new_employees)} nouveaux employés détectés par matricule")
+    app.logger.info(f" {len(new_employees)} nouveaux employés détectés par matricule")
     return new_employees
 
 
@@ -578,7 +574,7 @@ def add_employees_to_database(new_employees, source='pdf_import'):
     for emp_data in new_employees:
         try:
             if not emp_data.get('matricule'):
-                app.logger.info(f"⚠️ Employé {emp_data['nom']} ignoré - matricule manquant")
+                app.logger.info(f"Employé {emp_data['nom']} ignoré - matricule manquant")
                 continue
                 
             # Email temporaire basé sur le matricule (plus fiable)
@@ -594,18 +590,18 @@ def add_employees_to_database(new_employees, source='pdf_import'):
             
             db.session.add(new_employee)
             added_count += 1
-            app.logger.info(f"✅ Employé ajouté: {emp_data['nom']} (Matricule: {emp_data['matricule']})")
+            #app.logger.info(f"Employé ajouté: {emp_data['nom']} (Matricule: {emp_data['matricule']})")
             
         except Exception as e:
-            app.logger.error(f"❌ Erreur lors de l'ajout de {emp_data['nom']}: {str(e)}")
+            app.logger.error(f"Erreur lors de l'ajout de {emp_data['nom']}: {str(e)}")
     
     try:
         db.session.commit()
-        app.logger.info(f"💾 {added_count} nouveaux employés sauvegardés avec leur matricule")
+        #app.logger.info(f" {added_count} nouveaux employés sauvegardés avec leur matricule")
         return added_count
     except Exception as e:
         db.session.rollback()
-        app.logger.error(f"❌ Erreur lors de la sauvegarde: {str(e)}")
+        app.logger.error(f"Erreur lors de la sauvegarde: {str(e)}")
         return 0
 
 def create_individual_pdf_with_period(pdf_reader, employee_name, page_numbers, matricule, period, employees_data, output_dir):
@@ -630,20 +626,20 @@ def create_individual_pdf_with_period(pdf_reader, employee_name, page_numbers, m
         with open(output_path, 'wb') as output_file:
             pdf_writer.write(output_file)
         
-        # 🆕 NOUVEAU : Logique avec liens sécurisés
+        # NOUVEAU : Logique avec liens sécurisés
         if matricule:
             employee_record = find_employee_by_matricule(matricule)
             
             if employee_record:
                 # Protection avec matricule
                 protect_pdf_with_password(output_path, matricule)
-                app.logger.info(f"📄 PDF créé et protégé pour {employee_name}")
-                app.logger.info(f"🔐 Matricule: {matricule}")
-                app.logger.info(f"📁 Fichier: {output_filename}")
+                #app.logger.info(f" PDF créé et protégé pour {employee_name}")
+                #app.logger.info(f" Matricule: {matricule}")
+                #app.logger.info(f" Fichier: {output_filename}")
                 
                 # 🔗 NOUVEAU : Génération du lien sécurisé
                 # Récupérer le traitement actuel (vous devrez passer cette info)
-                current_traitement = get_current_traitement(output_dir)  # À implémenter
+                current_traitement = get_current_traitement(output_dir) 
                 
                 if current_traitement:
                     download_link = generate_secure_download_link(
@@ -656,23 +652,23 @@ def create_individual_pdf_with_period(pdf_reader, employee_name, page_numbers, m
                     if download_link:
                         # 📧 Envoi email avec lien sécurisé
                         if send_email_with_secure_link(employee_name, employee_record.email, download_link):
-                            app.logger.info(f"✅ Lien sécurisé envoyé à {employee_name}")
+                            #app.logger.info(f"Lien sécurisé envoyé à {employee_name}")
                             return True
                         else:
-                            app.logger.error(f"❌ Erreur envoi lien pour {employee_name}")
+                            app.logger.error(f"Erreur envoi lien pour {employee_name}")
                     else:
-                        app.logger.error(f"❌ Erreur génération lien pour {employee_name}")
+                        app.logger.error(f"Erreur génération lien pour {employee_name}")
                 else:
-                    app.logger.error(f"❌ Traitement non trouvé pour {employee_name}")
+                    app.logger.error(f"Traitement non trouvé pour {employee_name}")
             else:
-                app.logger.error(f"⚠️ Matricule {matricule} non trouvé en base")
+                app.logger.error(f"Matricule {matricule} non trouvé en base")
         
         # Fallback : PDF créé sans envoi
-        app.logger.info(f"📄 PDF créé pour {employee_name} - pas d'envoi automatique")
+        #app.logger.info(f"PDF créé pour {employee_name} - pas d'envoi automatique")
         return True
         
     except Exception as e:
-        app.logger.error(f"❌ Erreur création PDF pour {employee_name}: {str(e)}")
+        app.logger.error(f"Erreur création PDF pour {employee_name}: {str(e)}")
         return False
 
 def get_current_traitement(output_dir):
@@ -681,7 +677,7 @@ def get_current_traitement(output_dir):
         timestamp_folder = os.path.basename(output_dir)
         return Traitement.query.filter_by(timestamp_folder=timestamp_folder).first()
     except Exception as e:
-        app.logger.error(f"❌ Erreur récupération traitement: {str(e)}")
+        app.logger.error(f" Erreur récupération traitement: {str(e)}")
         return None
 
 
@@ -693,7 +689,7 @@ def protect_pdf_with_password(filepath, password):
         # Solution 1: Utilisation du paramètre allow_overwriting_input=True
         with pikepdf.open(filepath, allow_overwriting_input=True) as pdf:
             pdf.save(filepath, encryption=pikepdf.Encryption(user=password, owner=password))
-        app.logger.info(f"PDF protégé avec le mot de passe: {password}")
+        #app.logger.info(f"PDF protégé avec le mot de passe: {password}")
         
     except Exception as e:
         app.logger.error(f"Erreur lors de la protection du PDF: {str(e)}")
@@ -708,7 +704,7 @@ def protect_pdf_with_password(filepath, password):
             
             # Remplace le fichier original par le fichier temporaire
             shutil.move(temp_path, filepath)
-            app.logger.info(f"PDF protégé avec le mot de passe (méthode alternative): {password}")
+            #app.logger.info(f"PDF protégé avec le mot de passe (méthode alternative): {password}")
             
         except Exception as e2:
             app.logger.error(f"Erreur lors de la protection alternative du PDF: {str(e2)}")
@@ -730,11 +726,11 @@ def generate_secure_download_link(employee_record, traitement, file_path, matric
         db.session.add(download_link)
         db.session.commit()
         
-        app.logger.info(f"🔗 Lien sécurisé généré: {download_link.token[:8]}...")
+        #app.logger.info(f"Lien sécurisé généré: {download_link.token[:8]}...")
         return download_link
         
     except Exception as e:
-        app.logger.error(f"❌ Erreur génération lien: {str(e)}")
+        app.logger.error(f"Erreur génération lien: {str(e)}")
         db.session.rollback()
         return None
 
@@ -790,11 +786,11 @@ L'équipe RH
         server.sendmail(smtp_username, email, text)
         server.quit()
         
-        app.logger.info(f"📧 Email avec lien sécurisé envoyé à {employee_name}")
+        #app.logger.info(f"Email avec lien sécurisé envoyé à {employee_name}")
         return True
         
     except Exception as e:
-        app.logger.error(f"❌ Erreur envoi email: {str(e)}")
+        app.logger.error(f" Erreur envoi email: {str(e)}")
         return False
 
     
@@ -827,52 +823,137 @@ def secure_download_page(token):
 
 @app.route('/download/<token>/verify', methods=['POST'])
 def verify_and_download(token):
-    """Vérification du matricule et téléchargement"""
+    """Vérification avec réponse JSON pour gestion JavaScript"""
+    
+    try:
+        download_link = DownloadLink.query.filter_by(token=token).first()
+        matricule_saisi = request.form.get('matricule', '').strip()
+        client_ip = request.remote_addr
+        
+        # Log de la tentative d'accès
+        app.logger.info(f"🔑 Tentative d'accès - Token: {token[:8]}... IP: {client_ip}")
+        
+        download_link.tentatives_acces += 1
+        download_link.adresse_ip_derniere = client_ip
+        
+        if matricule_saisi != download_link.matricule_requis:
+            db.session.commit()
+            app.logger.error(f"🚨 ÉCHEC D'AUTHENTIFICATION - Token: {token[:8]}...")
+            remaining = download_link.max_tentatives - download_link.tentatives_acces
+            
+            return jsonify({
+                'success': False,
+                'message': f'Matricule incorrect. {remaining} tentatives restantes.',
+                'remaining_attempts': remaining
+            }), 400
+        
+        # Log succès
+        app.logger.info(f"✅ TÉLÉCHARGEMENT AUTORISÉ - Employé: {download_link.employee.nom_employe}")
+        
+        download_link.nombre_telechargements += 1
+        download_link.derniere_date_telechargement = datetime.utcnow()
+        db.session.commit()
+        
+        if not os.path.exists(download_link.chemin_fichier):
+            return jsonify({
+                'success': False,
+                'message': 'Fichier non trouvé sur le serveur.'
+            }), 404
+        
+        # 🔧 RETOURNER SUCCÈS AVEC URL DE TÉLÉCHARGEMENT
+        return jsonify({
+            'success': True,
+            'message': 'Téléchargement autorisé avec succès !',
+            'download_url': f'/download/file/{token}',
+            'employee_name': download_link.employee.nom_employe,
+            'filename': download_link.nom_fichier,
+            'download_count': download_link.nombre_telechargements
+        })
+        
+    except Exception as e:
+        app.logger.error(f"❌ Erreur téléchargement sécurisé: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Erreur serveur lors du téléchargement.'
+        }), 500
+
+
+
+
+@app.route('/download/success')
+def download_success():
+    """Page de remerciement après téléchargement réussi"""
+    
+    token = request.args.get('token')
+    employee_name = request.args.get('employee_name', 'Employé')
+    filename = request.args.get('filename', 'votre fiche de paie')
+    
+    if not token:
+        return redirect(url_for('index'))
+    
+    # Vérifier que le lien existe et a été utilisé
+    download_link = DownloadLink.query.filter_by(token=token).first()
+    if not download_link or download_link.nombre_telechargements == 0:
+        return redirect(url_for('index'))
+    
+    return render_template('download_success.html',
+                         employee_name=employee_name,
+                         filename=filename,
+                         download_count=download_link.nombre_telechargements,
+                         company_name="PayFlow")
+'''
+@app.route('/download/file/<token>')
+def download_file_secure(token):
+    """Téléchargement direct du fichier (appelé depuis la page de succès)"""
+    
     try:
         download_link = DownloadLink.query.filter_by(token=token).first()
         
-        if not download_link or not download_link.is_valid:
-            flash('Lien invalide ou expiré', 'error')
-            return redirect(url_for('secure_download_page', token=token))
-        
-        # Récupération du matricule saisi
-        matricule_saisi = request.form.get('matricule', '').strip()
-        
-        # Incrémenter les tentatives
-        download_link.tentatives_acces += 1
-        download_link.date_dernier_acces = datetime.utcnow()
-        download_link.adresse_ip_derniere = request.remote_addr
-        
-        # Vérification du matricule
-        if matricule_saisi != download_link.matricule_requis:
-            db.session.commit()
-            remaining = download_link.max_tentatives - download_link.tentatives_acces
-            flash(f'Matricule incorrect. {remaining} tentatives restantes.', 'error')
-            return redirect(url_for('secure_download_page', token=token))
-        
-        # Matricule correct - autoriser le téléchargement
-        download_link.nombre_telechargements += 1
-        if not download_link.date_premier_acces:
-            download_link.date_premier_acces = datetime.utcnow()
-        
-        db.session.commit()
+        if not download_link or download_link.nombre_telechargements == 0:
+            flash('Lien de téléchargement non autorisé', 'error')
+            return redirect(url_for('index'))
         
         # Vérifier que le fichier existe
         if not os.path.exists(download_link.chemin_fichier):
-            flash('Fichier non trouvé sur le serveur', 'error')
-            return redirect(url_for('secure_download_page', token=token))
+            flash('Fichier non trouvé', 'error')
+            return redirect(url_for('download_success', token=token))
         
-        app.logger.info(f"✅ Téléchargement autorisé: {download_link.employee.nom_employe}")
-        
-        return send_file(
-            download_link.chemin_fichier,
-            as_attachment=True,
-            download_name=download_link.nom_fichier
-        )
+        # Téléchargement du fichier
+        return send_file(download_link.chemin_fichier, 
+                        as_attachment=True, 
+                        download_name=download_link.nom_fichier)
         
     except Exception as e:
-        flash(f'Erreur lors du téléchargement : {str(e)}', 'error')
-        return redirect(url_for('secure_download_page', token=token))
+        app.logger.error(f"Erreur téléchargement fichier: {str(e)}")
+        flash('Erreur lors du téléchargement', 'error')
+        return redirect(url_for('index'))
+'''
+
+@app.route('/download/show-success')
+def show_download_success():
+    """Affiche la page de succès après téléchargement"""
+    
+    # 🔍 DEBUG : Afficher le contenu de la session
+    app.logger.info(f"🔍 SESSION CONTENT: {dict(session)}")
+    
+    # Récupérer les infos depuis la session
+    success_info = session.get('download_success')
+    
+    if not success_info:
+        app.logger.warning("⚠️ Pas d'info de succès en session, redirection vers index")
+        return redirect(url_for('index'))
+    
+    app.logger.info(f"✅ Info succès trouvée: {success_info}")
+    
+    # Garder les infos mais ne pas les supprimer tout de suite pour debug
+    # session.pop('download_success', None)  # Commenté temporairement
+    
+    return render_template('download_success.html',
+                         employee_name=success_info['employee_name'],
+                         filename=success_info['filename'],
+                         download_count=success_info['download_count'],
+                         company_name="PayFlow")
+
 
 
 @app.route('/dashboard')
@@ -1089,7 +1170,7 @@ def calculate_stats_from_db():
         }
         
     except Exception as e:
-        app.logger.error(f"❌ Erreur calcul stats DB: {str(e)}")
+        app.logger.error(f"❌Erreur calcul stats DB: {str(e)}")
         return {
             'total_treatments': 0,
             'total_employees': 0,
@@ -1126,7 +1207,7 @@ def get_treatments_from_db():
         return treatments
         
     except Exception as e:
-        app.logger.error(f"❌ Erreur récupération traitements DB: {str(e)}")
+        app.logger.error(f"Erreur récupération traitements DB: {str(e)}")
         return []
 
 
@@ -1229,11 +1310,11 @@ def edit_employee(employee_id):
     
     if request.method == 'POST':
         try:
-            # 🔒 Restrictions selon la source de création
+            #  Restrictions selon la source de création
             is_pdf_imported = employee.source_creation == 'pdf_import'
             
             if is_pdf_imported:
-                # ✅ Employé PDF : Email + Statut modifiables seulement
+                #  Employé PDF : Email + Statut modifiables seulement
                 email = request.form.get('email', '').strip()
                 statut = request.form.get('statut', 'actif')
                 
@@ -1259,7 +1340,7 @@ def edit_employee(employee_id):
                 flash(f'Email et statut mis à jour pour {employee.nom_employe} (importé PDF)', 'success')
                 
             else:
-                # ✅ Employé manuel : Toutes modifications autorisées
+                # Employé manuel : Toutes modifications autorisées
                 nom_employe = request.form.get('nom_employe', '').strip()
                 email = request.form.get('email', '').strip()
                 matricule = request.form.get('matricule', '').strip()
@@ -1417,41 +1498,9 @@ def get_v12_dashboard_stats():
         return stats
         
     except Exception as e:
-        app.logger.error(f"❌ Erreur calcul stats v1.2: {str(e)}")
+        app.logger.error(f" Erreur calcul stats v1.2: {str(e)}")
         return {}
 
-def get_treatment_activity_chart():
-    """Données pour graphique d'activité des traitements (30 derniers jours)"""
-    try:
-        now = datetime.utcnow()
-        last_30_days = now - timedelta(days=30)
-        
-        # Traitements par jour
-        daily_treatments = db.session.query(
-            func.date(Traitement.date_creation).label('date'),
-            func.count(Traitement.id).label('count')
-        ).filter(
-            Traitement.date_creation >= last_30_days
-        ).group_by(
-            func.date(Traitement.date_creation)
-        ).order_by('date').all()
-        
-        # Formatage pour Chart.js
-        labels = []
-        data = []
-        
-        for treatment in daily_treatments:
-            labels.append(treatment.date.strftime('%d/%m'))
-            data.append(treatment.count)
-        
-        return {
-            'labels': labels,
-            'data': data
-        }
-        
-    except Exception as e:
-        app.logger.error(f"❌ Erreur graphique activité: {str(e)}")
-        return {'labels': [], 'data': []}
 
 def get_employee_top_stats():
     """Top 10 des employés par nombre de fiches reçues"""
@@ -1476,32 +1525,9 @@ def get_employee_top_stats():
         ]
         
     except Exception as e:
-        app.logger.error(f"❌ Erreur top employés: {str(e)}")
+        app.logger.error(f" Erreur top employés: {str(e)}")
         return []
-
-def get_download_security_stats():
-    """Statistiques de sécurité des téléchargements"""
-    try:
-        # Répartition des tentatives d'accès
-        security_data = db.session.query(
-            DownloadLink.tentatives_acces.label('attempts'),
-            func.count(DownloadLink.id).label('count')
-        ).group_by(
-            DownloadLink.tentatives_acces
-        ).order_by('attempts').all()
-        
-        return [
-            {
-                'attempts': data.attempts,
-                'count': data.count,
-                'status': 'success' if data.attempts == 0 else ('warning' if data.attempts < 5 else 'danger')
-            }
-            for data in security_data
-        ]
-        
-    except Exception as e:
-        app.logger.error(f"❌ Erreur stats sécurité: {str(e)}")
-        return []
+    
 
 def get_recent_activity():
     """Activité récente (dernières 24h)"""
@@ -1525,7 +1551,7 @@ def get_recent_activity():
         }
         
     except Exception as e:
-        app.logger.error(f"❌ Erreur activité récente: {str(e)}")
+        app.logger.error(f" Erreur activité récente: {str(e)}")
         return {'treatments': [], 'downloads': []}
 
 # Routes de maintenance système
@@ -1632,7 +1658,7 @@ def get_maintenance_stats():
         }
         
     except Exception as e:
-        app.logger.error(f"❌ Erreur stats maintenance: {str(e)}")
+        app.logger.error(f"Erreur stats maintenance: {str(e)}")
         return {}
 
 def analyze_old_files():
@@ -1665,7 +1691,7 @@ def analyze_old_files():
         }
         
     except Exception as e:
-        app.logger.error(f"❌ Erreur analyse fichiers anciens: {str(e)}")
+        app.logger.error(f"Erreur analyse fichiers anciens: {str(e)}")
         return {'count': 0, 'size': 0}
 
 def get_folder_size(folder_path):
@@ -1880,7 +1906,6 @@ def perform_database_optimization():
             'error': str(e)
         }
 
-# Routes pour détails des traitements
 @app.route('/admin/treatment/<timestamp>/details')
 def treatment_details(timestamp):
     """Affiche les détails d'un traitement avec liste des PDFs générés"""
@@ -1908,11 +1933,34 @@ def treatment_details(timestamp):
                     import re
                     employee_name = re.sub(r'_\d{4}_\d{2}$', '', employee_name)
                     
+                    # 🆕 RÉCUPÉRER LES STATISTIQUES DEPUIS LA BASE
+                    access_count = 0
+                    download_count = 0
+                    
+                    # Chercher dans les download_links du traitement
+                    for link in traitement.download_links:
+                        # Correspondance par nom de fichier exact
+                        if link.nom_fichier == filename:
+                            access_count = link.tentatives_acces
+                            download_count = link.nombre_telechargements
+                            break
+                        # Correspondance par nom d'employé dans le nom de fichier
+                        elif link.employee and link.employee.nom_employe:
+                            # Normaliser les noms pour comparaison
+                            db_name = link.employee.nom_employe.strip().upper()
+                            file_name = employee_name.strip().upper()
+                            if db_name == file_name or db_name in filename.upper():
+                                access_count = link.tentatives_acces
+                                download_count = link.nombre_telechargements
+                                break
+                    
                     generated_files.append({
                         'filename': filename,
                         'employee_name': employee_name,
                         'file_size': format_file_size(file_size),
-                        'file_path': file_path
+                        'file_path': file_path,
+                        'access_count': access_count,      
+                        'download_count': download_count   
                     })
         
         # Trier par nom d'employé
@@ -1926,6 +1974,7 @@ def treatment_details(timestamp):
     except Exception as e:
         flash(f'Erreur lors du chargement des détails : {str(e)}', 'error')
         return redirect(url_for('dashboard'))
+
 
 @app.route('/admin/treatment/<timestamp>/download/<filename>')
 def download_generated_pdf(timestamp, filename):
@@ -2049,7 +2098,7 @@ def view_logs():
                              lines=lines)
         
     except Exception as e:
-        app.logger.error(f"❌ Erreur consultation logs: {str(e)}")
+        app.logger.error(f"Erreur consultation logs: {str(e)}")
         flash(f'Erreur lors de la consultation des logs: {str(e)}', 'error')
         return redirect(url_for('dashboard'))
 
