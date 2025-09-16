@@ -466,21 +466,51 @@ document.getElementById('download-form').addEventListener('submit', function(e) 
             document.getElementById('success-message').classList.add('show');
             
             // Déclencher le téléchargement
-            setTimeout(() => {
-                const link = document.createElement('a');
-                link.href = data.download_url;
-                link.download = data.filename;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }, 500);
+// Déclencher le téléchargement - VERSION CORRIGÉE DESKTOP
+setTimeout(() => {
+    // 🔧 MÉTHODE DIFFÉRENTE SELON DESKTOP/MOBILE
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+        // Mobile : Méthode simple
+        const link = document.createElement('a');
+        link.href = data.download_url;
+        link.download = data.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } else {
+        // Desktop : Méthode robuste avec fetch
+        fetch(data.download_url, {
+            method: 'GET',
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            // Créer un URL blob pour le téléchargement
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = data.filename;
+            document.body.appendChild(link);
+            link.click();
             
-        } else {
-            // ❌ ERREUR : Réactiver le formulaire
-            alert(data.message);
-            submitBtn.textContent = '📥 Télécharger ma fiche de paie';
-            submitBtn.disabled = false;
-            document.getElementById('matricule').focus();
+            // Nettoyer
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            console.error('❌ Erreur téléchargement desktop:', error);
+            alert('Erreur de téléchargement: ' + error.message + '\n\nVeuillez actualiser la page et réessayer.');
+        });
+    }
+}, 500);
+
             
             // Mettre à jour tentatives
             if (data.remaining_attempts !== undefined) {

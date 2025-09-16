@@ -877,6 +877,26 @@ def verify_and_download(token):
             'message': 'Erreur serveur lors du téléchargement.'
         }), 500
 
+@app.route('/download/file/<token>')
+def download_file_direct(token):
+    """Téléchargement direct du fichier"""
+    
+    try:
+        download_link = DownloadLink.query.filter_by(token=token).first()
+        
+        if not download_link or download_link.nombre_telechargements == 0:
+            return "Téléchargement non autorisé", 403
+        
+        if not os.path.exists(download_link.chemin_fichier):
+            return "Fichier non trouvé", 404
+        
+        return send_file(download_link.chemin_fichier, 
+                        as_attachment=True, 
+                        download_name=download_link.nom_fichier)
+        
+    except Exception as e:
+        app.logger.error(f"❌ Erreur téléchargement direct: {str(e)}")
+        return "Erreur de téléchargement", 500
 
 
 
