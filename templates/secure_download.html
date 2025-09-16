@@ -264,7 +264,7 @@
             color: #2f855a;
             font-size: 14px;
         }
-        /* 🔧 Masquer le message de succès par défaut */
+        
 .success-message {
     display: none;
     animation: fadeInUp 0.6s ease-out;
@@ -285,7 +285,6 @@
     }
 }
 
-/* 🔧 Transition pour masquer le contenu principal */
 .main-content {
     transition: all 0.5s ease;
 }
@@ -294,7 +293,6 @@
     display: none;
 }
 
-/* 🔧 Améliorer le style du message de succès existant */
 .success-message .success-icon {
     font-size: 60px;
     color: #48bb78;
@@ -322,7 +320,6 @@
     line-height: 1.6;
 }
 
-/* 🔧 Détails du téléchargement dans le succès */
 .success-details {
     background: linear-gradient(135deg, #e6fffa, #f0fff4);
     border: 2px solid #81e6d9;
@@ -342,7 +339,6 @@
 .success-detail-item:last-child {
     margin-bottom: 0;
 }
-
     </style>
 </head>
 <body>
@@ -395,6 +391,8 @@
             Traitement du {{ download_link.traitement.date_creation.strftime('%d/%m/%Y à %H:%M') }} • 
             Expire le {{ download_link.date_expiration.strftime('%d/%m/%Y') }}
         </div>
+        <!-- 🆕 Conteneur pour erreurs matricule -->
+        <div id="matricule-error" class="alert alert-error" style="display:none;"></div>
     </div>
 
     <form id="download-form">
@@ -433,15 +431,20 @@ document.getElementById('download-form').addEventListener('submit', function(e) 
     
     const matricule = document.getElementById('matricule').value.trim();
     const submitBtn = document.getElementById('download-btn');
+    const errorBox = document.getElementById('matricule-error');
     
     if (!matricule) {
-        alert('Veuillez saisir votre matricule');
+        errorBox.textContent = 'Veuillez saisir votre matricule';
+        errorBox.style.display = 'block';
+        submitBtn.textContent = '📥 Télécharger ma fiche de paie';
+        submitBtn.disabled = false;
         return;
     }
     
     // Indicateur de chargement
     submitBtn.textContent = '⏳ Vérification...';
     submitBtn.disabled = true;
+    errorBox.style.display = 'none'; // cacher ancien message d'erreur
     
     // Envoi de la requête AJAX
     fetch('/download/{{ download_link.token }}/verify', {
@@ -454,23 +457,15 @@ document.getElementById('download-form').addEventListener('submit', function(e) 
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // 🎉 SUCCÈS : Masquer contenu principal et afficher succès
             document.getElementById('main-content').classList.add('hidden');
-            
-            // Remplir les détails
             document.getElementById('employee-detail').textContent = `👤 Employé : ${data.employee_name}`;
             document.getElementById('filename-detail').textContent = `📄 Fichier : ${data.filename}`;
             document.getElementById('download-detail').textContent = `📊 Téléchargement n°${data.download_count}`;
-            
-            // Afficher le message de succès
             document.getElementById('success-message').classList.add('show');
             
-            // Déclencher le téléchargement
             setTimeout(() => {
                 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                
                 if (isMobile) {
-                    // Mobile : Méthode simple
                     const link = document.createElement('a');
                     link.href = data.download_url;
                     link.download = data.filename;
@@ -478,7 +473,6 @@ document.getElementById('download-form').addEventListener('submit', function(e) 
                     link.click();
                     document.body.removeChild(link);
                 } else {
-                    // Desktop : Méthode robuste avec fetch
                     fetch(data.download_url, {
                         method: 'GET',
                         credentials: 'same-origin'
@@ -501,26 +495,23 @@ document.getElementById('download-form').addEventListener('submit', function(e) 
                     })
                     .catch(error => {
                         console.error('❌ Erreur téléchargement desktop:', error);
-                        alert('Erreur de téléchargement: ' + error.message + '\n\nVeuillez actualiser la page et réessayer.');
+                        errorBox.textContent = 'Erreur de téléchargement: ' + error.message + '. Veuillez actualiser la page et réessayer.';
+                        errorBox.style.display = 'block';
                     });
                 }
             }, 500);
 
-            // Mettre à jour tentatives
             if (data.remaining_attempts !== undefined) {
                 document.getElementById('remaining-attempts').textContent = 
                     data.remaining_attempts + ' tentatives restantes';
             }
 
         } else {
-            // ❌ Matricule incorrect
-            alert(data.message || 'Matricule incorrect');
-
-            // Réactiver le bouton
+            errorBox.textContent = data.message || 'Matricule incorrect';
+            errorBox.style.display = 'block';
             submitBtn.textContent = '📥 Télécharger ma fiche de paie';
             submitBtn.disabled = false;
 
-            // Mettre à jour tentatives si dispo
             if (data.remaining_attempts !== undefined) {
                 document.getElementById('remaining-attempts').textContent =
                     data.remaining_attempts + ' tentatives restantes';
@@ -529,13 +520,12 @@ document.getElementById('download-form').addEventListener('submit', function(e) 
     })
     .catch(error => {
         console.error('Erreur:', error);
-        alert('Erreur de connexion. Veuillez réessayer.');
+        errorBox.textContent = 'Erreur de connexion. Veuillez réessayer.';
+        errorBox.style.display = 'block';
         submitBtn.textContent = '📥 Télécharger ma fiche de paie';
         submitBtn.disabled = false;
     });
 });
 </script>
-
-
 </body>
 </html>
