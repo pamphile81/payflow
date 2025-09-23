@@ -27,6 +27,30 @@ import glob
 from config import config
 from models import db, Employee, Traitement, TraitementEmploye, DownloadLink
 
+class BaseConfig:
+    SECRET_KEY = os.getenv("SECRET_KEY", "change-me")
+
+
+def create_app(config_object=BaseConfig):
+    app = Flask(__name__)
+    app.config.from_object(config_object)
+
+    # ---- Extensions (on passera en "init_app" plus tard si besoin) ----
+    # Exemple si tu passes en mode lazy:
+    # db.init_app(app)
+    # migrate.init_app(app, db)
+    # mail.init_app(app)
+
+    # ---- Routes existantes ----
+    # IMPORTANT: pour l’instant, ne touche pas tes @app.route existants.
+    # On va faire une astuce temporaire juste en dessous.
+
+    return app
+
+_app_for_decorators = create_app()
+app = _app_for_decorators
+
+
 # Variable pour empêcher les traitements multiples
 processing_lock = threading.Lock()
 is_processing = False
@@ -2145,13 +2169,5 @@ if __name__ == '__main__':
     print("🔒 PayFlow v1.2 - HTTPS sécurisé")
     print("🌐 Accès : https://192.168.1.55:5000")
 
-    app.run(
-        host='0.0.0.0',
-        port=5000,
-        debug=False,
-        threaded=True,
-        ssl_context=(cert_file, key_file)
-    )
-
-
+app.run(debug=True)
 
