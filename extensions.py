@@ -6,3 +6,4 @@ from flask_mail import Mail
 db = SQLAlchemy()
 migrate = Migrate()
 mail = Mail()
+    

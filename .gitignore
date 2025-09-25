@@ -1,6 +1,7 @@
 # Environnement virtuel
 venv/
 env/
+.venv/
 
 # Fichiers temporaires
 uploads/
@@ -11,7 +12,6 @@ logs/
 
 # Configuration sensible
 email_config.py
-config.py
 
 # Fichiers système
 .DS_Store
@@ -24,3 +24,5 @@ check_ssl.py
 generate_ssl_cert.py
 mkcert.exe
 ssl/
+
+employess.csv
