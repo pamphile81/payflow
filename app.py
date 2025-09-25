@@ -16,7 +16,6 @@ from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email import encoders
 from services.email_service import send_email_with_secure_link
-from services.pdf_service import protect_pdf_with_password
 from services.link_service import generate_secure_download_link, get_current_traitement
 from services.employee_service import (
     load_employees,
@@ -24,8 +23,13 @@ from services.employee_service import (
     detect_new_employees,
     add_employees_to_database,
 )
-
-
+from services.pdf_service import (
+    protect_pdf_with_password,
+    generate_timestamp_folder,
+    extract_employee_name_from_page,
+    extract_employee_matricule_from_page,
+    extract_period_from_page,
+)
 
 from dotenv import load_dotenv
 from flask import (
@@ -234,19 +238,6 @@ ALLOWED_EXTENSIONS = {'pdf'}
 def allowed_file(filename: str) -> bool:
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def generate_timestamp_folder() -> str:
-    return datetime.now().strftime('%Y%m%d%H%M%S')
-
-def format_file_size(size_bytes: int) -> str:
-    if size_bytes == 0:
-        return "0 B"
-    size_names = ["B", "KB", "MB", "GB", "TB"]
-    i = 0
-    while size_bytes >= 1024 and i < len(size_names) - 1:
-        size_bytes /= 1024.0
-        i += 1
-    return f"{size_bytes:.1f} {size_names[i]}"
-
 
 # ------------------------------------------------------------
 # Routes principales
@@ -300,84 +291,6 @@ def upload_file():
             is_processing = False
 
     return redirect(url_for('index'))
-
-
-# ------------------------------------------------------------
-# Extraction infos PDF
-# ------------------------------------------------------------
-def extract_employee_name_from_page(page_text: str):
-    lines = page_text.split('\n')
-    for i, line in enumerate(lines):
-        line = line.strip()
-        if "Catégorie" in line:
-            if " M " in line:
-                parts = line.split(" M ")
-                if len(parts) > 1:
-                    name = parts[1].strip()
-                    if name and len(name) > 5:
-                        return name
-            elif " Mme " in line:
-                parts = line.split(" Mme ")
-                if len(parts) > 1:
-                    name = parts[1].strip()
-                    if name and len(name) > 5:
-                        return name
-            if i + 1 < len(lines):
-                next_line = lines[i + 1].strip()
-                if next_line and len(next_line) > 5 and next_line.isupper():
-                    return next_line
-    return None
-
-def extract_employee_matricule_from_page(page_text: str):
-    import re
-    lines = page_text.split('\n')
-    for i, line in enumerate(lines):
-        line = line.strip()
-        if "Matricule" in line:
-            m = re.search(r'Matricule\s+(\d+)', line)
-            if m:
-                return m.group(1)
-            if i + 1 < len(lines):
-                m = re.search(r'^(\d{4})(?:\s|$)', lines[i+1].strip())
-                if m:
-                    return m.group(1)
-    return None
-
-def extract_period_from_page(page_text: str):
-    import re
-    lines = page_text.split('\n')
-    patterns = [
-        r'Période du \d{2}/(\d{2})/(\d{2}) au',
-        r'Période du \d{2}/(\d{2})/(\d{4}) au',
-        r'du \d{2}/(\d{2})/(\d{2}) au',
-        r'Mois\s*:\s*(\d{2})/(\d{4})',
-        r'(\d{1,2})/(\d{1,2})/(\d{2,4})'
-    ]
-    for line in lines:
-        line = line.strip()
-        for i, pattern in enumerate(patterns):
-            match = re.search(pattern, line)
-            if match:
-                if i in [0, 2]:
-                    month = match.group(1).zfill(2)
-                    year = match.group(2)
-                    full_year = f"20{year}" if int(year) < 50 else f"19{year}"
-                    return f"{full_year}_{month}"
-                elif i == 1:
-                    month = match.group(1).zfill(2)
-                    year = match.group(2)
-                    return f"{year}_{month}"
-                elif i == 3:
-                    month = match.group(1).zfill(2)
-                    year = match.group(2)
-                    return f"{year}_{month}"
-                elif i == 4:
-                    day = match.group(1).zfill(2)
-                    month = match.group(2).zfill(2)
-                    year = match.group(3)
-                    full_year = f"20{year}" if len(year) == 2 and int(year) < 50 else (f"19{year}" if len(year) == 2 else year)
-                    return f"{full_year}_{month}"
-    return datetime.now().strftime('%Y_%m')
 
 
 # ------------------------------------------------------------
