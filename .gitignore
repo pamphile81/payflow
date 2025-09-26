@@ -25,6 +25,4 @@ generate_ssl_cert.py
 mkcert.exe
 ssl/
 
-employees.csv
-
 .env
