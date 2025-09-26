@@ -19,7 +19,7 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 
-from . import public_bp
+from ....routes import public_bp
 from app.extensions import db
 from app.models.models import Employee, Traitement, TraitementEmploye, DownloadLink
 

@@ -1,5 +1,5 @@
 from flask import render_template, request, redirect, url_for, flash
-from . import admin_bp
+from ....routes import admin_bp
 # importe services et models utilisés par tes routes admin
 
 @admin_bp.get("/")

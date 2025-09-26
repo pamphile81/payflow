@@ -1,7 +1,13 @@
 # app/__init__.py
 from flask import Flask
-from app.extensions import db, migrate, csrf, mail, limiter
-from app.config import get_config
+from .extensions import db, migrate, csrf, mail, limiter
+from .config import get_config
+
+from flask import Blueprint
+
+public_bp = Blueprint("public", __name__)
+admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+
 
 def create_app(config_name="prod"):
     app = Flask(__name__)
@@ -13,8 +19,9 @@ def create_app(config_name="prod"):
     mail.init_app(app)
     limiter.init_app(app)
 
-    from app.blueprints.public.views import bp as public_bp
-    from app.blueprints.admin.views import bp as admin_bp
+    from .blueprints.public import bp as public_bp
+    from .blueprints.admin import bp as admin_bp
+    from .blueprints.api import bp as api_bp
     app.register_blueprint(public_bp)
     app.register_blueprint(admin_bp, url_prefix="/admin")
 
