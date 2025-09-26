@@ -2,8 +2,8 @@
 from __future__ import annotations
 from flask import current_app
 from typing import Dict, List, Optional
-from extensions import db
-from models import Employee
+from app.extensions import db
+from app.models.models import Employee
 from datetime import datetime
 
 def load_employees() -> Dict[str, dict]:

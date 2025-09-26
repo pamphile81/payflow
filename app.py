@@ -15,22 +15,22 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email import encoders
-from services.email_service import send_email_with_secure_link
-from services.link_service import generate_secure_download_link, get_current_traitement
-from services.employee_service import (
+from app.services.email_service import send_email_with_secure_link
+from app.services.link_service import generate_secure_download_link, get_current_traitement
+from app.services.employee_service import (
     load_employees,
     find_employee_by_matricule,
     detect_new_employees,
     add_employees_to_database,
 )
-from services.pdf_service import (
+from app.services.pdf_service import (
     protect_pdf_with_password,
     generate_timestamp_folder,
     extract_employee_name_from_page,
     extract_employee_matricule_from_page,
     extract_period_from_page,
 )
-
+from app.services.treatment_service import process_pdf
 from dotenv import load_dotenv
 from flask import (
     Flask, render_template, request, redirect, url_for, flash,
@@ -40,11 +40,11 @@ from werkzeug.utils import secure_filename
 import PyPDF2
 
 # --- config & extensions ---
-from config import get_config
-from extensions import db, migrate, mail
+from app.config import get_config
+from app.extensions import db, migrate, mail
 
 # --- modèles (utilisés dans les routes) ---
-from models import Employee, Traitement, TraitementEmploye, DownloadLink
+from app.models.models import Employee, Traitement, TraitementEmploye, DownloadLink
 
 # 1) Charger .env tôt (ne casse rien si .env absent)
 load_dotenv(override=False)
@@ -90,6 +90,9 @@ def setup_logging(app: Flask):
 # ------------------------------------------------------------
 def create_app(config_name: str | None = None) -> Flask:
     app = Flask(__name__)
+    from routes import public_bp
+    #from routes.public import *  # si besoin temporaire pendant la transition
+    app.register_blueprint(public_bp)
 
     # Résolution de l'env: APP_ENV > FLASK_ENV > 'development'
     config_name = config_name or os.getenv('APP_ENV') or os.getenv('FLASK_ENV') or 'development'
@@ -102,9 +105,14 @@ def create_app(config_name: str | None = None) -> Flask:
     migrate.init_app(app, db)
     mail.init_app(app)
 
+    from routes import public_bp
+    app.register_blueprint(public_bp)
+
     # Dossiers par défaut si absents dans la config
-    app.config.setdefault('UPLOAD_FOLDER', 'uploads')
-    app.config.setdefault('OUTPUT_FOLDER', 'output')
+    #app.config.setdefault('UPLOAD_FOLDER', 'uploads')
+    #app.config.setdefault('OUTPUT_FOLDER', 'output')
+    os.makedirs(app.config.get("UPLOAD_FOLDER", "uploads"), exist_ok=True)
+    os.makedirs(app.config.get("OUTPUT_FOLDER", "output"), exist_ok=True)
 
     # Route de santé toujours enregistrée
     @app.get("/health")
@@ -292,122 +300,6 @@ def upload_file():
 
     return redirect(url_for('index'))
 
-
-# ------------------------------------------------------------
-# Cœur de traitement
-# ------------------------------------------------------------
-def process_pdf(filepath: str, output_dir: str):
-    start_time = datetime.now()
-    try:
-        employees = load_employees()
-        employee_data = {}
-
-        with open(filepath, 'rb') as fh:
-            pdf_reader = PyPDF2.PdfReader(fh)
-            total_pages = len(pdf_reader.pages)
-
-            for page_num in range(total_pages):
-                page = pdf_reader.pages[page_num]
-                page_text = page.extract_text() or ""
-
-                name = extract_employee_name_from_page(page_text)
-                matricule = extract_employee_matricule_from_page(page_text)
-                period = extract_period_from_page(page_text)
-
-                if name:
-                    if name not in employee_data:
-                        employee_data[name] = {'pages': [], 'matricule': matricule, 'period': period}
-                    else:
-                        if not employee_data[name]['matricule'] and matricule:
-                            employee_data[name]['matricule'] = matricule
-                        if not employee_data[name]['period'] and period:
-                            employee_data[name]['period'] = period
-                    employee_data[name]['pages'].append(page_num)
-
-            new_employees = detect_new_employees(employee_data)
-            new_employees_count = add_employees_to_database(new_employees) if new_employees else 0
-            if new_employees_count:
-                flash(f'🆕 {new_employees_count} nouveaux employés ajoutés', 'info')
-
-            traitement = Traitement(
-                timestamp_folder=os.path.basename(output_dir),
-                fichier_original=os.path.basename(filepath),
-                taille_fichier=os.path.getsize(filepath),
-                nombre_pages=total_pages,
-                nombre_employes_detectes=len(employee_data),
-                nombre_nouveaux_employes=new_employees_count,
-                statut='en_cours'
-            )
-            db.session.add(traitement)
-            db.session.commit()
-
-            processed = 0
-            for name, data in employee_data.items():
-                if create_individual_pdf_with_period(
-                    pdf_reader, name, data['pages'], data['matricule'],
-                    data['period'], employees, output_dir
-                ):
-                    processed += 1
-                    try:
-                        employee_record = Employee.query.filter_by(nom_employe=name).first()
-                        if employee_record:
-                            te = TraitementEmploye(
-                                traitement_id=traitement.id,
-                                employe_id=employee_record.id,
-                                matricule_extrait=data['matricule'],
-                                periode_extraite=data['period'],
-                                nom_fichier_genere=f"{name}_{data['period'] or datetime.now().strftime('%Y_%m')}.pdf"
-                            )
-                            db.session.add(te)
-                    except Exception as e:
-                        app.logger.error(f"Erreur enregistrement traitement pour {name}: {e}")
-
-        end_time = datetime.now()
-        traitement.nombre_employes_traites = processed
-        traitement.duree_traitement_secondes = int((end_time - start_time).total_seconds())
-        traitement.statut = 'termine' if processed == len(employee_data) else 'partiel'
-        db.session.commit()
-
-        return {
-            'success': True,
-            'count': processed,
-            'total_employees': len(employee_data),
-            'new_employees': new_employees_count,
-            'message': f'{processed} fiches traitées'
-        }
-
-    except Exception as e:
-        app.logger.error(f"Erreur traitement: {e}")
-        return {'success': False, 'error': str(e)}
-
-
-
-def create_individual_pdf_with_period(pdf_reader, employee_name, page_numbers, matricule, period, employees_data, output_dir):
-    try:
-        writer = PyPDF2.PdfWriter()
-        for p in page_numbers:
-            writer.add_page(pdf_reader.pages[p])
-
-        safe = "".join(c for c in employee_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
-        output_filename = f"{safe}_{(period or datetime.now().strftime('%Y_%m'))}.pdf"
-        output_path = os.path.join(output_dir, output_filename)
-
-        with open(output_path, 'wb') as f:
-            writer.write(f)
-
-        if matricule:
-            employee_record = find_employee_by_matricule(matricule)
-            if employee_record:
-                protect_pdf_with_password(output_path, matricule)
-                current_traitement = get_current_traitement(output_dir)
-                if current_traitement:
-                    link = generate_secure_download_link(employee_record, current_traitement, output_path, matricule)
-                    if link:
-                        send_email_with_secure_link(employee_name, employee_record.email, link)
-        return True
-    except Exception as e:
-        app.logger.error(f"Erreur création PDF {employee_name}: {e}")
-        return False
 
 
 

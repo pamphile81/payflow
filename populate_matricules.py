@@ -1,6 +1,6 @@
 # populate_matricules.py
 from app import create_app
-from models import db, Employee
+from app.models.models import db, Employee
 
 def populate_missing_matricules():
     """Remplit les matricules manquants"""

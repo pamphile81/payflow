@@ -1,320 +1,37 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Téléchargement réussi - PayFlow</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        html, body {
-            height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-            color: #2d3748;
-            overflow: hidden;
-        }
-        
-        .success-container {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            position: relative;
-        }
-        
-        /* Animation de confettis */
-        .confetti {
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            background: #ffd700;
-            animation: confetti-fall 3s linear infinite;
-        }
-        
-        .confetti:nth-child(2n) { background: #ff6b6b; animation-delay: 0.5s; }
-        .confetti:nth-child(3n) { background: #4ecdc4; animation-delay: 1s; }
-        .confetti:nth-child(4n) { background: #45b7d1; animation-delay: 1.5s; }
-        .confetti:nth-child(5n) { background: #96ceb4; animation-delay: 2s; }
-        
-        @keyframes confetti-fall {
-            0% {
-                transform: translateY(-100vh) rotate(0deg);
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(100vh) rotate(720deg);
-                opacity: 0;
-            }
-        }
-        
-        .success-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 30px;
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
-            padding: min(8vh, 80px) min(6vw, 100px);
-            width: 90%;
-            max-width: 700px;
-            text-align: center;
-            position: relative;
-            z-index: 10;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            animation: slideUp 0.8s ease-out;
-        }
-        
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .success-icon {
-            width: min(15vh, 150px);
-            height: min(15vh, 150px);
-            background: linear-gradient(135deg, #48bb78, #38a169);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto min(4vh, 40px);
-            font-size: min(8vh, 80px);
-            color: white;
-            box-shadow: 0 20px 40px rgba(72, 187, 120, 0.3);
-            animation: bounce 1s ease-in-out 0.5s both;
-        }
-        
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-10px); }
-            60% { transform: translateY(-5px); }
-        }
-        
-        .success-title {
-            font-size: min(5vh, 48px);
-            font-weight: 700;
-            color: #2d3748;
-            margin-bottom: min(3vh, 25px);
-            animation: fadeIn 0.8s ease-out 1s both;
-        }
-        
-        .success-message {
-            font-size: min(2.5vh, 22px);
-            color: #4a5568;
-            margin-bottom: min(4vh, 40px);
-            line-height: 1.6;
-            animation: fadeIn 0.8s ease-out 1.2s both;
-        }
-        
-        .employee-info {
-            background: #f0fff4;
-            border: 2px solid #68d391;
-            border-radius: 20px;
-            padding: min(3vh, 30px);
-            margin-bottom: min(4vh, 40px);
-            animation: fadeIn 0.8s ease-out 1.4s both;
-        }
-        
-        .employee-name {
-            font-size: min(3vh, 28px);
-            font-weight: 600;
-            color: #2f855a;
-            margin-bottom: min(1vh, 10px);
-        }
-        
-        .file-info {
-            font-size: min(2vh, 16px);
-            color: #4a5568;
-            margin-bottom: min(1vh, 8px);
-        }
-        
-        .download-count {
-            font-size: min(1.8vh, 14px);
-            color: #718096;
-        }
-        
-        .action-buttons {
-            display: flex;
-            gap: min(3vw, 30px);
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: min(4vh, 40px);
-            animation: fadeIn 0.8s ease-out 1.6s both;
-        }
-        
-        .btn {
-            padding: min(2.5vh, 18px) min(5vw, 50px);
-            border: none;
-            border-radius: 50px;
-            font-size: min(2.2vh, 18px);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .btn-download {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-        }
-        
-        .btn-close {
-            background: #f7fafc;
-            color: #4a5568;
-            border: 2px solid #e2e8f0;
-        }
-        
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
-        }
-        
-        .thank-you-message {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            padding: min(3vh, 25px);
-            border-radius: 20px;
-            margin-bottom: min(3vh, 25px);
-            animation: fadeIn 0.8s ease-out 1.8s both;
-        }
-        
-        .company-logo {
-            font-size: min(2.5vh, 24px);
-            margin-bottom: min(1vh, 8px);
-        }
-        
-        .company-message {
-            font-size: min(2vh, 16px);
-            opacity: 0.9;
-        }
-        
-        .auto-close {
-            position: absolute;
-            bottom: min(3vh, 30px);
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: min(1.8vh, 14px);
-            color: #718096;
-            animation: fadeIn 0.8s ease-out 2s both;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @media (max-width: 768px) {
-            .success-card {
-                width: 95%;
-                padding: min(6vh, 50px) min(4vw, 30px);
-            }
-            
-            .action-buttons {
-                flex-direction: column;
-                align-items: center;
-                gap: min(2vh, 15px);
-            }
-            
-            .btn {
-                width: 80%;
-                justify-content: center;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- Confettis animés -->
-    <div class="confetti" style="left: 10%; animation-delay: 0s;"></div>
-    <div class="confetti" style="left: 20%; animation-delay: 0.2s;"></div>
-    <div class="confetti" style="left: 30%; animation-delay: 0.4s;"></div>
-    <div class="confetti" style="left: 40%; animation-delay: 0.6s;"></div>
-    <div class="confetti" style="left: 50%; animation-delay: 0.8s;"></div>
-    <div class="confetti" style="left: 60%; animation-delay: 1s;"></div>
-    <div class="confetti" style="left: 70%; animation-delay: 1.2s;"></div>
-    <div class="confetti" style="left: 80%; animation-delay: 1.4s;"></div>
-    <div class="confetti" style="left: 90%; animation-delay: 1.6s;"></div>
-    
-    <div class="success-container">
-        <div class="success-card">
-            <!-- Icône de succès -->
-            <div class="success-icon">✅</div>
-            
-            <!-- Titre principal -->
-            <h1 class="success-title">Téléchargement réussi !</h1>
-            
-            <!-- Message principal -->
-            <p class="success-message">
-                Votre fiche de paie a été téléchargée avec succès.<br>
-                Le fichier est maintenant disponible sur votre appareil.
-            </p>
-            
-            <!-- Informations employé -->
-            <div class="employee-info">
-                <div class="employee-name">👤 {{ employee_name }}</div>
-                <div class="file-info">📄 Fichier : {{ filename }}</div>
-                <div class="download-count">📊 Téléchargement n°{{ download_count }}</div>
-            </div>
-            
-            
-            <!-- Message de remerciement -->
-            <div class="thank-you-message">
-                <div class="company-logo">🚀 {{ company_name }}</div>
-                <div class="company-message">
-                    Merci de faire confiance à PayFlow pour la gestion sécurisée de vos documents de paie.
-                    Votre sécurité et votre satisfaction sont notre priorité.
-                </div>
-            </div>
+{% extends "base.html" %}
+{% block title %}Téléchargement prêt · PayFlow{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h1 class="h4 mb-3">Votre fichier est prêt 🎉</h1>
+
+        <p class="mb-1">
+          Bonjour <strong>{{ employee_name or 'Employé' }}</strong>,
+        </p>
+        <p class="text-secondary">
+          Votre fichier <strong>{{ filename or 'fichier.pdf' }}</strong> est disponible.
+        </p>
+
+        <div class="d-flex gap-2">
+          <!-- Chemin direct sécurisé côté serveur -->
+          {% if request.args.get('token') %}
+            <a class="btn btn-primary"
+               href="{{ url_for('public.download_file_direct', token=request.args.get('token')) }}">
+              Télécharger maintenant
+            </a>
+          {% endif %}
+          <a class="btn btn-outline-light" href="{{ url_for('public.index') }}">Retour à l’accueil</a>
         </div>
-        
-        <!-- Message de fermeture automatique -->
-        <div class="auto-close">
-            Cette page se fermera automatiquement dans 30 secondes
-        </div>
+
+        <hr class="my-4 border-secondary">
+        <p class="small text-secondary mb-0">
+          Conseil : Conservez votre matricule — il sert aussi de mot de passe du PDF.
+        </p>
+      </div>
     </div>
-    
-    <script>
-        // Fermeture automatique après 30 secondes
-        setTimeout(function() {
-            window.close();
-        }, 30000);
-        
-        // Animation continue des confettis
-        function createConfetti() {
-            const confetti = document.createElement('div');
-            confetti.className = 'confetti';
-            confetti.style.left = Math.random() * 100 + '%';
-            confetti.style.backgroundColor = ['#ffd700', '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4'][Math.floor(Math.random() * 5)];
-            document.body.appendChild(confetti);
-            
-            setTimeout(() => confetti.remove(), 3000);
-        }
-        
-        // Créer des confettis toutes les 500ms pendant 5 secondes
-        let confettiInterval = setInterval(createConfetti, 500);
-        setTimeout(() => clearInterval(confettiInterval), 5000);
-        
-        // Message de confirmation au téléchargement
-        document.querySelector('.btn-download').addEventListener('click', function(e) {
-            this.innerHTML = '⏳ Téléchargement...';
-            setTimeout(() => {
-                this.innerHTML = '✅ Téléchargé !';
-            }, 1000);
-        });
-    </script>
-</body>
-</html>
+  </div>
+</div>
+{% endblock %}

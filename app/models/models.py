@@ -1,18 +1,19 @@
 # models.py
 from datetime import datetime, timedelta
-from flask_sqlalchemy import SQLAlchemy
+#from flask_sqlalchemy import SQLAlchemy
 import secrets
-import hashlib
+#import hashlib
 import secrets
+from app.extensions import db
 
 
-db = SQLAlchemy()
+#db = SQLAlchemy()
 
 class Employee(db.Model):
     __tablename__ = 'employees'
     
     id = db.Column(db.Integer, primary_key=True)
-    matricule = db.Column(db.String(20), unique=True, nullable=False)  # ✅ Maintenant obligatoire et unique
+    matricule = db.Column(db.String(20), unique=True, nullable=False)  # Maintenant obligatoire et unique
     nom_employe = db.Column(db.String(200), nullable=False)
     email = db.Column(db.String(200), nullable=False)
     date_creation = db.Column(db.DateTime, default=datetime.utcnow)
@@ -93,7 +94,7 @@ class DownloadLink(db.Model):
     
     # Audit
     date_creation = db.Column(db.DateTime, default=datetime.utcnow)
-    date_expiration = db.Column(db.DateTime, nullable=False)  # ✅ CORRECT
+    date_expiration = db.Column(db.DateTime, nullable=False)  #  CORRECT
     date_premier_acces = db.Column(db.DateTime)
     date_dernier_acces = db.Column(db.DateTime)
     nombre_telechargements = db.Column(db.Integer, default=0)
@@ -129,7 +130,7 @@ class DownloadLink(db.Model):
     def __repr__(self):
         return f'<DownloadLink {self.token[:8]}... pour {self.employee.nom_employe}>'
 
-# ✅ Relations à la fin du fichier models.py
+#  Relations à la fin du fichier models.py
 Employee.download_links = db.relationship('DownloadLink', backref='employee', lazy=True)
 Traitement.download_links = db.relationship('DownloadLink', backref='traitement', lazy=True)
 
