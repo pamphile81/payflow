@@ -4,7 +4,7 @@ import os
 import csv
 from werkzeug.utils import secure_filename
 import PyPDF2
-import pikepdf
+#import pikepdf
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -22,14 +22,18 @@ import secrets
 import logging
 from logging.handlers import RotatingFileHandler
 import glob
+from flask_migrate import Migrate
 
 # Import des modèles et configuration
-from config import config
+#from config import Config
+from config import get_config
 from models import db, Employee, Traitement, TraitementEmploye, DownloadLink
 
 # Variable pour empêcher les traitements multiples
 processing_lock = threading.Lock()
 is_processing = False
+
+
 
 def setup_logging(app):
     """Configure le système de logging pour PayFlow"""
@@ -98,7 +102,8 @@ def create_app(config_name='default'):
     security_logger = setup_logging(app)
     
     # Configuration
-    app.config.from_object(config[config_name])
+    #app.config.from_object(config[config_name])
+    app.config.from_object(get_config(config_name))
     
     # Initialisation des extensions
     db.init_app(app)
@@ -334,7 +339,7 @@ def create_individual_pdf_with_matricule(pdf_reader, employee_name, page_numbers
             email = employees_data[employee_name]['email']
             
             # Protection du PDF avec le matricule extrait du PDF
-            protect_pdf_with_password(output_path, matricule)
+            #protect_pdf_with_password(output_path, matricule)
            # app.logger.info(f"PDF créé et protégé pour {employee_name} avec matricule {matricule} (extrait du PDF)")
             
             if send_email_with_secure_link(employee_name, email, output_path):
@@ -632,7 +637,7 @@ def create_individual_pdf_with_period(pdf_reader, employee_name, page_numbers, m
             
             if employee_record:
                 # Protection avec matricule
-                protect_pdf_with_password(output_path, matricule)
+                #protect_pdf_with_password(output_path, matricule)
                 #app.logger.info(f" PDF créé et protégé pour {employee_name}")
                 #app.logger.info(f" Matricule: {matricule}")
                 #app.logger.info(f" Fichier: {output_filename}")
@@ -683,7 +688,7 @@ def get_current_traitement(output_dir):
 
 
 
-def protect_pdf_with_password(filepath, password):
+'''def protect_pdf_with_password(filepath, password):
     """Protège un PDF avec un mot de passe"""
     try:
         # Solution 1: Utilisation du paramètre allow_overwriting_input=True
@@ -708,7 +713,8 @@ def protect_pdf_with_password(filepath, password):
             
         except Exception as e2:
             app.logger.error(f"Erreur lors de la protection alternative du PDF: {str(e2)}")
-
+'''
+            
 def generate_secure_download_link(employee_record, traitement, file_path, matricule):
     """Génère un lien de téléchargement sécurisé"""
     try:
@@ -746,7 +752,7 @@ def send_email_with_secure_link(employee_name, email, download_link):
         smtp_password = GMAIL_CONFIG['password']
         
         # URL de téléchargement
-        download_url = f"https://91.160.69.7:5000/download/{download_link.token}"
+        download_url = f"http://91.160.69.7:5000/download/{download_link.token}"
         
         # Création du message
         msg = MIMEMultipart()
@@ -2139,19 +2145,16 @@ if __name__ == '__main__':
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
     # Certificats mkcert
-    cert_file = '192.168.1.55+2.pem'
-    key_file = '192.168.1.55+2-key.pem'
+    ##cert_file = '192.168.1.55+2.pem'
+    ##key_file = '192.168.1.55+2-key.pem'
 
-    print("🔒 PayFlow v1.2 - HTTPS sécurisé")
-    print("🌐 Accès : https://192.168.1.55:5000")
+    print("🔒 PayFlow v2.0")
+    print("🌐 Accès : http://192.168.1.55:5000")
 
     app.run(
         host='0.0.0.0',
         port=5000,
         debug=False,
         threaded=True,
-        ssl_context=(cert_file, key_file)
+       # ssl_context=(cert_file, key_file)
     )
-
-
-
