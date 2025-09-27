@@ -2,8 +2,6 @@
 from datetime import datetime, timedelta
 from flask_sqlalchemy import SQLAlchemy
 import secrets
-import hashlib
-import secrets
 
 
 db = SQLAlchemy()
@@ -12,7 +10,7 @@ class Employee(db.Model):
     __tablename__ = 'employees'
     
     id = db.Column(db.Integer, primary_key=True)
-    matricule = db.Column(db.String(20), unique=True, nullable=False)  # ✅ Maintenant obligatoire et unique
+    matricule = db.Column(db.String(20), unique=True, nullable=False)  # Maintenant obligatoire et unique
     nom_employe = db.Column(db.String(200), nullable=False)
     email = db.Column(db.String(200), nullable=False)
     date_creation = db.Column(db.DateTime, default=datetime.utcnow)

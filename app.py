@@ -27,7 +27,7 @@ from flask_migrate import Migrate
 # Import des modèles et configuration
 #from config import Config
 from config import get_config
-from models import db, Employee, Traitement, TraitementEmploye, DownloadLink
+from app.model.models import db, Employee, Traitement, TraitementEmploye, DownloadLink
 
 # Variable pour empêcher les traitements multiples
 processing_lock = threading.Lock()
