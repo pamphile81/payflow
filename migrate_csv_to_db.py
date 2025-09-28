@@ -1,6 +1,6 @@
 # migrate_csv_to_db.py
 from app import create_app
-from models import db, Employee
+from app.model.models import db, Employee
 import csv
 import os
 

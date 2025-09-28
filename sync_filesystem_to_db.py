@@ -1,6 +1,6 @@
 # sync_filesystem_to_db.py
 from app import create_app
-from models import db, Traitement, Employee
+from app.model.models import db, Traitement, Employee
 import os
 from datetime import datetime
 

@@ -27,6 +27,11 @@ class Config:
         },
     }
 
+    # Ajoutez cette nouvelle configuration
+    SQLALCHEMY_SESSION_OPTIONS = {
+        "expire_on_commit": False
+    }
+
     # Fichiers
     UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "uploads")
     OUTPUT_FOLDER = os.getenv("OUTPUT_FOLDER", "output")
