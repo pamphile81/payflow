@@ -3,7 +3,5 @@ PyPDF2==3.0.1
 pikepdf==8.7.1
 SQLAlchemy==2.0.23
 Flask-SQLAlchemy==3.1.1
-psycopg2-binary==2.9.9
+psycopg2-binary==2.9.10
 Flask-Migrate==4.0.5
-secrets>=3.3.0
-hashlib

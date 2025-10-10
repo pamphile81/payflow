@@ -252,7 +252,7 @@ def create_database_backup():
         cmd = [
             'pg_dump',
             '-h', 'localhost',
-            '-U', 'payflow_user',
+            '-U', 'payflow_db_user',
             '-d', 'payflow_db',
             '-f', filename
         ]
